@@ -159,10 +159,10 @@ hypridle answers that with hyprlock. The idle timeline:
 
 | Time idle | What happens |
 |---|---|
-| 4:30 | notification “Locking in 30 seconds” |
-| 5:00 | lock |
-| 5:30 | screens off (any input wakes them) |
-| 30:00 | suspend |
+| 14:30 | notification “Locking in 30 seconds” |
+| 15:00 | lock |
+| 15:30 | screens off (any input wakes them) |
+| 60:00 | suspend |
 
 Video playback and calls inhibit idle. Media keys keep working on the lock screen.
 The lock screen shows the current keyboard layout — type your password with that layout.
@@ -230,7 +230,7 @@ nothing-shell quit
 ### The lock pipeline
 
 ```
-Super+L / power menu / control center / sleep / 5 min idle
+Super+L / power menu / control center / sleep / 15 min idle
                      │
            loginctl lock-session          (systemd-logind emits "Lock")
                      │

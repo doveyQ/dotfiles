@@ -6,6 +6,9 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Idle: lock after 15 minutes (was 5), screens off at 15:30, suspend after 1 hour (was 30 minutes).
+
 ## [1.0.0] — 2026-10-07
 
 ### Added
