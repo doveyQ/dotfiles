@@ -49,18 +49,20 @@ tooltip label { color: @fg; padding: 4px 6px; }
 #custom-logo:hover { background: @fg; color: #000; }
 
 #system { padding: 0 12px; }
-#tray, #custom-clipboard, #cpu, #memory,
+#tray, #custom-clipboard, #cpu, #memory, #battery,
 #custom-notification, #custom-power { padding: 0 8px; }
 
 /* ── right pill ── */
 #system label, #tray { color: #d0d0d0; }
-#cpu, #memory { font-family: "Ndot 55", "Inter"; font-size: 13px; letter-spacing: 1px; }
+#cpu, #memory, #battery { font-family: "Ndot 55", "Inter"; font-size: 13px; letter-spacing: 1px; }
 #custom-notification,
 #custom-clipboard,
 #custom-power { font-size: 15px; }
 #custom-notification.dnd { color: @dim; }
 #custom-power { color: @fg; }
-#cpu:hover, #memory:hover,
+#battery.warning:not(.charging) { color: @fg; }
+#battery.critical:not(.charging) { color: @red; }
+#cpu:hover, #memory:hover, #battery:hover,
 #custom-power:hover,
 #custom-clipboard:hover,
 #custom-notification:hover { color: @red; }

@@ -64,11 +64,16 @@ command -v pacman >/dev/null || { echo "This installer targets Arch / EndeavourO
 printf '%s\n' "${W}nothing dotfiles${N}  ${D}${REPO}${N}"
 
 read_list() { grep -vE '^\s*(#|$)' "$1" | awk '{print $1}'; }
+is_laptop() { compgen -G "/sys/class/power_supply/BAT*" >/dev/null; }
 
 # ── 1. packages ─────────────────────────────────────────
 if ((DO_PACKAGES)); then
   step "Packages"
   mapfile -t pkgs < <(read_list "$REPO/packages/pacman.txt")
+  if is_laptop; then
+    info "battery found — adding packages/laptop.txt"
+    mapfile -t -O "${#pkgs[@]}" pkgs < <(read_list "$REPO/packages/laptop.txt")
+  fi
   mapfile -t missing < <(pacman -T "${pkgs[@]}" || true)
   if ((${#missing[@]})); then
     info "missing: ${missing[*]}"
@@ -117,6 +122,23 @@ if ((DO_SYSTEM)); then
       info "$svc.service enabled"
     fi
   done
+
+  # laptops: power key → Nothing power menu instead of an instant power-off
+  if is_laptop; then
+    dropin=/etc/systemd/logind.conf.d/10-nothing-laptop.conf
+    if ! cmp -s "$REPO/system/logind/10-nothing-laptop.conf" "$dropin"; then
+      run sudo install -Dm644 "$REPO/system/logind/10-nothing-laptop.conf" "$dropin"
+      run sudo systemctl kill -s HUP systemd-logind    # reload config without ending sessions
+    else
+      info "logind: power key handled by the desktop"
+    fi
+    for svc in power-profiles-daemon iio-sensor-proxy; do
+      if systemctl list-unit-files "$svc.service" >/dev/null 2>&1 && ! systemctl is-enabled -q "$svc" 2>/dev/null &&
+         [[ "$(systemctl is-enabled "$svc" 2>/dev/null)" != static ]]; then
+        run sudo systemctl enable --now "$svc"
+      fi
+    done
+  fi
 
   # one lock screen only: hyprlock (via hypridle). Other lockers would fight over the session lock.
   for p in swaylock swaylock-effects swayidle xss-lock gtklock; do

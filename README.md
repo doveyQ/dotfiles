@@ -31,7 +31,7 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 | ![control](assets/previews/control-center.png) | ![power](assets/previews/power-menu.png) | ![lock](assets/previews/lockscreen.png) |
 
 > Preview images are placeholders — drop your own screenshots into `assets/previews/`
-> (`grim -o DP-2 assets/previews/desktop.png`).
+> (`grim assets/previews/desktop.png`).
 
 ## Features
 
@@ -55,7 +55,12 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 - **One lock screen** — hyprlock only: giant Ndot clock, blur, battery/AC readout,
   now‑playing, keyboard‑layout chip, red‑accented password pill.
 - **Austrian German, no dead keys** everywhere: Hyprland, hyprlock, login screen, TTY.
-- Dual monitor: workspaces 1–5 on the bottom 144 Hz screen (DP‑2), 6–10 on the top (HDMI‑A‑1).
+- **Works on any machine out of the box** — every screen at its preferred mode. Monitors, main
+  screen and devices go in one git-ignored file, `~/.config/hypr/hyprland.local.lua`; start from
+  `hypr/examples/` (dual-monitor desktop, laptop / 2-in-1).
+- **Laptops** — battery in the status pill, low-battery warnings, brightness keys, touchpad tap +
+  3-finger workspace swipes, power key → power menu, Power Mode switch in Settings; on
+  convertibles touchscreen + pen and auto-rotation in tablet mode.
 
 ## Install
 
@@ -112,15 +117,17 @@ dotfiles/
 ├── Makefile             install · links · check · reload · update
 ├── docs/GUIDE.md        the full manual
 ├── scripts/check.sh     linters + config validation (make check, CI)
-├── packages/            pacman.txt · aur.txt
+├── packages/            pacman.txt · aur.txt · laptop.txt (added when a battery is present)
 ├── system/greetd/       boot-lock login config (opt-in, --boot-lock)
+├── system/logind/       laptops: power key → power menu
 ├── hypr/                → ~/.config/hypr
 │   ├── hyprland.lua     main config (Hyprland ≥ 0.56 uses Lua, not hyprland.conf)
 │   ├── hyprlock.conf    lock screen
-│   ├── hypridle.conf    idle → lock → screens off → suspend
+│   ├── hypridle.conf    idle → (dim) → lock → screens off → suspend
+│   ├── examples/        machine files to copy to hyprland.local.lua (desktop, laptop)
 │   ├── hyprpaper.conf
 │   ├── wallpapers/
-│   └── scripts/         record · battery · nowplaying · nothing-reload
+│   └── scripts/         record · battery · nowplaying · nothing-reload · brightness · autorotate
 ├── nothing-shell/       → ~/.config/nothing-shell   (island + control center, Python/GTK3)
 ├── waybar/              → ~/.config/waybar   (logo + status pill, desktop widgets, scripts/)
 ├── swaync/              → ~/.config/swaync   (notification popups)
@@ -155,11 +162,16 @@ dotfiles/
 | `Super` `1`–`0` · `Super` `Shift` `1`–`0` | Workspace · move window there |
 | `Print` · `Shift` `Print` · `Super` `Shift` `Print` | Region → clipboard · full → ~/Pictures · record |
 | `Super` `Shift` `R` | Reload the desktop |
+| 3‑finger swipe | Previous / next workspace (touchpad and touchscreen) |
+| Brightness keys · Power key | Brightness (with popup) · power menu — laptop |
 | `Super` `F1` | Cheat‑sheet |
 
 ## Customising
 
-- **Main monitor** for the island / dock: `NOTHING_OUTPUT=DP-2` (env) — default `DP-2`.
+- **Your machine** (monitors, main screen, touchpad, …): copy an example —
+  `cp ~/.config/hypr/examples/laptop.lua ~/.config/hypr/hyprland.local.lua` — and edit it.
+  It's git-ignored, so every computer keeps its own and `git pull` never conflicts.
+  Bar on one screen only: `waybar/local.example.jsonc` → `~/.config/waybar/local.jsonc`.
 - **Weather location**: `NOTHING_WEATHER_LOCATION=Vienna` — default is IP‑based.
 - **Colours**: `nothing-shell/style.css`, `waybar/style.css`, `rofi/nothing.rasi`, `kitty/kitty.conf`
   all share the palette `#000 · #141414 · #1e1e1e@80% · #fff · #d71921`.

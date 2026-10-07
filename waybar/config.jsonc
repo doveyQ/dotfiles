@@ -3,7 +3,7 @@
 {
   "layer": "top",
   "position": "top",
-  "output": ["DP-2"],          // main screen only — add "HDMI-A-1" to mirror on the top monitor
+  "include": ["~/.config/waybar/local.jsonc"],   // per machine, e.g. "output" — see local.example.jsonc
   "height": 36,
   "margin-top": 8,
   "margin-left": 12,
@@ -33,6 +33,7 @@
       "custom/clipboard",
       "cpu",
       "memory",
+      "battery",
       "custom/notification",
       "custom/power"
     ]
@@ -57,6 +58,18 @@
     "interval": 5,
     "tooltip-format": "{used:0.1f} / {total:0.1f} GiB",
     "on-click": "~/.local/bin/nothing-shell control toggle"
+  },
+
+  // laptop only — Waybar hides the module when there is no battery
+  "battery": {
+    "format": "{icon} {capacity}",
+    "format-charging": "󰂄 {capacity}",
+    "format-plugged": "󰚥 {capacity}",
+    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+    "states": { "warning": 20, "critical": 10 },
+    "interval": 30,
+    "tooltip-format": "{timeTo} · {power:.1f} W",
+    "on-click": "~/.local/bin/nothing-settings powermode"
   },
 
   "custom/record": {

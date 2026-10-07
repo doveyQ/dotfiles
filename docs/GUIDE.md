@@ -23,7 +23,7 @@ dot-matrix numerals (the Ndot fonts) and a single red accent that always means
 *live, active or dangerous*.
 
 ```
-┌───────────────────────────── DP-2 (bottom, 144 Hz) ─────────────────────────────┐
+┌───────────────────────────────── main screen ────────────────────────────────────┐
 │ [tux]             ⣿ ▬ · · · ·  ☀ 15°  11:32             [rec 📋 CPU RAM 🔔 ⏻]   │  ← top bar
 │  ╰ waybar            ╰ nothing-shell: dynamic island          ╰ waybar status pill│
 │                                                                                  │
@@ -48,8 +48,10 @@ dot-matrix numerals (the Ndot fonts) and a single red accent that always means
 | **nwg-dock** | auto-hiding dock on the main screen | `nwg-dock-hyprland/` |
 | **kitty** | terminal | `kitty/kitty.conf` |
 
-**Monitors.** `HDMI-A-1` (70 Hz) sits physically *above* `DP-2` (144 Hz, main).
-Workspaces 1–5 live on DP-2, 6–10 on HDMI-A-1. `Super`+`↑`/`↓` moves focus between screens.
+**Monitors.** Out of the box every screen runs at its preferred mode and the island, bar and
+dock use the primary one. Your own layout (which screen is *main*, positions, refresh rates,
+which workspaces go where) lives in a git-ignored machine file — see §2 *Your machine*.
+`Super`+arrows move focus across screens.
 
 ---
 
@@ -110,15 +112,52 @@ things at login (KWallet / GNOME Keyring) don't run — apps using them will ask
 wallet password once. Full-disk encryption is the right protection for data at rest
 either way.
 
-### Different hardware?
+### Your machine (monitors, laptop, devices)
 
-The defaults are for this machine. On another one, edit before (or right after) installing:
+The repo is a neutral default; everything that belongs to **one computer** goes in
+`~/.config/hypr/hyprland.local.lua`. It's git-ignored (`*.local.lua`), so each machine keeps its
+own copy, and you can `git pull` / push the shared config without touching it. Start from an
+example:
 
-- **Monitor names / modes** — `hypr/hyprland.lua` → `MONITORS` (`hyprctl monitors` lists names).
-- **Main monitor** for island, dock and popups — set `NOTHING_OUTPUT` (see 5) and replace
-  `DP-2` in `hyprland.lua` (workspace rules, dock), `waybar/*.jsonc` and `swaync/config.json`.
-- **Keyboard** — `INPUT` section of `hyprland.lua` + `localectl` (see 5).
-- **NVIDIA** — remove the `LIBVA_DRIVER_NAME` line and follow the Hyprland wiki's NVIDIA page.
+```bash
+cp ~/.config/hypr/examples/desktop-dual-monitor.lua ~/.config/hypr/hyprland.local.lua   # two screens
+cp ~/.config/hypr/examples/laptop.lua               ~/.config/hypr/hyprland.local.lua   # laptop / 2-in-1
+```
+
+The file returns a table; every field is optional:
+
+```lua
+return {
+    main      = "DP-2",                                   -- island, bar, dock, popups, recorder
+    monitors  = { { output = "DP-2", mode = "1920x1080@144", position = "0x0", scale = 1 } },
+    workspace = function(i) return "DP-2" end,            -- monitor for workspace i
+    setup     = function()                                -- runs last: override anything
+        hl.config({ input = { touchpad = { natural_scroll = true } } })
+        hl.bind("SUPER + T", hl.dsp.exec_cmd("thunar"))
+    end,
+}
+```
+
+Names come from `hyprctl monitors` and `hyprctl devices`. `main` is exported as
+`NOTHING_OUTPUT`; `NOTHING_WORKSPACES` (set it in `setup` with `hl.env`) is how many workspace
+dots the island shows (default 10). Hyprland reloads on save; `Super` `Shift` `R` restarts the
+rest. Mistakes appear in the red error bar.
+
+**Waybar** shows on every screen unless you limit it: copy `waybar/local.example.jsonc` to
+`~/.config/waybar/local.jsonc` (also git-ignored) and set `"output"`. SwayNC follows the
+focused screen.
+
+**Laptops** — `install.sh` notices the battery and also installs `packages/laptop.txt`
+(brightnessctl, iio-sensor-proxy, power-profiles-daemon) plus a logind drop-in so the power key
+opens the power menu instead of switching off. The shared config already handles brightness
+keys (with a popup), tap-to-click, 3-finger workspace swipes, backlight dimming 30 s before the
+lock, low-battery warnings (20 / 10 %) and the battery in the status pill (click → Power Mode).
+`examples/laptop.lua` adds the machine-specific part: natural scrolling, touchpad acceleration,
+touchscreen + pen mapped to the panel and, on convertibles, auto-rotation **only in tablet
+mode** (`scripts/autorotate.sh`, triggered by the tablet-mode switch).
+
+**Other hardware** — keyboard: `INPUT` section of `hyprland.lua` + `localectl` (see 5).
+NVIDIA: remove the `LIBVA_DRIVER_NAME` line and follow the Hyprland wiki's NVIDIA page.
 
 ---
 
@@ -307,6 +346,9 @@ dot, `-RTMIN+9` the notification bell.
 | `~/.cache/nothing-shell/` | notification history, album-art cache |
 | `~/.local/state/nothing/night.json` | night-mode state and schedule |
 | `/etc/greetd/config.toml` | only with `--boot-lock` (template: `system/greetd/config.toml`) |
+| `/etc/systemd/logind.conf.d/10-nothing-laptop.conf` | laptops: power key → power menu |
+| `$XDG_RUNTIME_DIR/nothing-rotate/` | auto-rotation state (convertibles) |
+| `hypr/hyprland.local.lua`, `waybar/local.jsonc` | your machine files — inside the repo folder, git-ignored |
 | `~/.local/share/fonts/nothing/` | Ndot / NType fonts |
 | `~/.config-backup/<timestamp>/` | your configs from before the first install |
 
@@ -324,20 +366,16 @@ dot, `-RTMIN+9` the notification bell.
 | lock-screen look | `hypr/hyprlock.conf` |
 | wallpaper | Settings hub → Wallpaper (drop images into `hypr/wallpapers/`) |
 | weather location | `export NOTHING_WEATHER_LOCATION=Vienna` (e.g. via `hl.env(...)` in hyprland.lua) |
-| main monitor for the island | `hl.env("NOTHING_OUTPUT", "DP-1")` in hyprland.lua |
+| monitors, main screen for the island, touchpad, per-machine binds | `~/.config/hypr/hyprland.local.lua` (§2 *Your machine*) |
 | settings-hub entries | `rofi/scripts/settings.sh` — add a `label|key` line and a `case` branch |
 | island content | `nothing-shell/nothing-shell.py` → `Island._build_panel()` |
 
 **Apply changes:** Hyprland reloads `hyprland.lua` automatically on save; everything else:
 `make reload` or `Super` `Shift` `R`. Always run `make check` before committing.
 
-**Machine-specific tweaks** you don't want in git: put them in a file ending in
-`.local.lua` / `.local.conf` (ignored) and load it from the main config, e.g. at the end of
-`hyprland.lua`:
-
-```lua
-pcall(dofile, os.getenv("HOME") .. "/.config/hypr/hyprland.local.lua")
-```
+**Machine-specific tweaks** never go into the shared files — put them in
+`~/.config/hypr/hyprland.local.lua` (its `setup()` runs last and can override anything) and
+`~/.config/waybar/local.jsonc`. Both are git-ignored; see §2 *Your machine*.
 
 **Fonts.** Ndot is used for numerals and headings. In **Pango font strings** (hyprlock, rofi)
 write `Ndot 57,` with a trailing comma — otherwise Pango reads `57` as the size. In GTK/Waybar
@@ -388,7 +426,7 @@ make update      # git pull --ff-only + relink
   [CONTRIBUTING](../CONTRIBUTING.md).
 - Record user-visible changes in [CHANGELOG](../CHANGELOG.md) under *Unreleased*; on release
   move them under a version and tag it: `git tag -a v1.1.0 -m "v1.1.0" && git push --tags`.
-- Screenshots for the README go to `assets/previews/` (`grim -o DP-2 assets/previews/desktop.png`)
+- Screenshots for the README go to `assets/previews/` (`grim assets/previews/desktop.png`)
   — check them for private windows before committing.
 
 ---
@@ -417,7 +455,9 @@ Packages are left installed; remove them with `sudo pacman -Rns …` if you want
 |---|---|
 | Red error bar at the top | `hyprctl configerrors`, or `Hyprland --verify-config -c ~/.config/hypr/hyprland.lua` |
 | Island / control center missing | `nothing-shell quit; nothing-shell` in a terminal — errors are printed there |
-| Island on the wrong monitor | `NOTHING_OUTPUT` (see 5); monitor names: `hyprctl monitors` |
+| Island on the wrong monitor | `main` in `hyprland.local.lua` (§2 *Your machine*); monitor names: `hyprctl monitors` |
+| Laptop: brightness keys do nothing | `pacman -Q brightnessctl`; `brightnessctl set 50%` in a terminal |
+| Laptop: no auto-rotation in tablet mode | `hyprctl devices` must list the switch `HP WMI hotkeys`; `monitor-sensor --accel` must print orientations; screen stuck rotated: `~/.config/hypr/scripts/autorotate.sh tablet off` |
 | Bluetooth toggle does nothing, `bluetoothctl` hangs | `sudo systemctl enable --now bluetooth` |
 | Wrong keys / dead keys on the login screen or TTY | `sudo localectl set-x11-keymap at pc105 nodeadkeys` · `sudo localectl set-keymap --no-convert de-latin1-nodeadkeys` |
 | **“Oopsie daisy … lockscreen app died”** | `Ctrl+Alt+F3`, log in, `hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()'`, back with `Ctrl+Alt+F1/F2`. Never kill hyprlock to “unlock”. |

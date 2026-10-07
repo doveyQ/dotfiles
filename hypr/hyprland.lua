@@ -17,14 +17,6 @@ local c = {
     red     = "rgba(d71921ff)",
 }
 
-------------------
----- MONITORS ----
-------------------
--- HDMI-A-1 sits physically ABOVE DP-2.
-hl.monitor({ output = "HDMI-A-1", mode = "1920x1080@70",  position = "0x0",    scale = 1 })
-hl.monitor({ output = "DP-2",     mode = "1920x1080@144", position = "0x1080", scale = 1, vrr = 2 }) -- VRR in fullscreen only
-hl.monitor({ output = "",         mode = "preferred",     position = "auto",   scale = "auto" })
-
 ---------------------
 ---- MY PROGRAMS ----
 ---------------------
@@ -32,8 +24,33 @@ local terminal    = "kitty"
 local fileManager = "dolphin"
 local browser     = "firefox"
 local launcher    = "rofi -show drun -theme ~/.config/rofi/nothing.rasi"
+local hypr        = os.getenv("HOME") .. "/.config/hypr"
 local bin         = os.getenv("HOME") .. "/.local/bin"
-local scripts     = os.getenv("HOME") .. "/.config/hypr/scripts"
+local scripts     = hypr .. "/scripts"
+
+-----------------
+---- MACHINE ----
+-----------------
+-- Everything specific to one computer lives in ~/.config/hypr/hyprland.local.lua
+-- (git-ignored — start from hypr/examples/). It returns a table, every field optional:
+--   main       output for the island, bar, dock, popups, recorder (→ $NOTHING_OUTPUT)
+--   monitors   list of hl.monitor() specs
+--   workspace  function(i) → output for workspace i
+--   setup      function, runs at the very end: devices, binds, autostart, overrides …
+-- Without it: every screen at its preferred mode, workspaces wherever they are opened.
+local machine = {}
+local localfile = hypr .. "/hyprland.local.lua"
+local f = io.open(localfile)
+if f then
+    f:close()
+    machine = dofile(localfile) or {}   -- no pcall: mistakes show up in the error bar
+end
+
+------------------
+---- MONITORS ----
+------------------
+for _, m in ipairs(machine.monitors or {}) do hl.monitor(m) end
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
 
 -------------------
 ---- AUTOSTART ----
@@ -48,8 +65,9 @@ hl.on("hyprland.start", function()
     hl.exec_cmd(bin .. "/nothing-shell")                      -- dynamic island + control center
     hl.exec_cmd("waybar")                                     -- logo + status pill
     hl.exec_cmd("waybar -c ~/.config/waybar/desktop.jsonc -s ~/.config/waybar/desktop.css") -- desktop widgets
-    hl.exec_cmd("nwg-dock-hyprland -d -i 36 -mb 10 -o DP-2 -s nothing.css")
+    hl.exec_cmd("nwg-dock-hyprland -d -i 36 -mb 10 " .. (machine.main and ("-o " .. machine.main) or "") .. " -s nothing.css")
     hl.exec_cmd("wl-paste --watch cliphist store")
+    hl.exec_cmd(scripts .. "/battery-warn.sh")                -- low-battery popups (exits without a battery)
 end)
 
 -------------------------------
@@ -62,6 +80,7 @@ hl.env("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("LIBVA_DRIVER_NAME", "radeonsi")   -- AMD / Mesa VA-API
+if machine.main then hl.env("NOTHING_OUTPUT", machine.main) end   -- island, dock, recorder, reload script
 
 -----------------------
 ---- LOOK AND FEEL ----
@@ -155,7 +174,7 @@ hl.config({
         allow_workspace_cycles   = true,
     },
     cursor = {
-        default_monitor = "DP-2",
+        default_monitor = machine.main,   -- nil → Hyprland's default
     },
     render = {
         direct_scanout = 2, -- games only, safe on AMD
@@ -181,19 +200,33 @@ hl.config({
         follow_mouse       = 1,
         sensitivity        = 0,
         accel_profile      = "flat",
-        touchpad = { natural_scroll = false },
+        touchpad = {
+            natural_scroll       = false,  -- set true in hyprland.local.lua if you like it
+            tap_to_click         = true,
+            disable_while_typing = true,
+            clickfinger_behavior = true,   -- 2-finger click = right, 3-finger = middle
+        },
+    },
+    gestures = {
+        workspace_swipe_distance = 300,
+        workspace_swipe_create_new = false,
     },
 })
 
-------------------------------------
----- DUAL-MONITOR WORKSPACES -------
-------------------------------------
--- 1-5 → bottom (DP-2, 144 Hz) · 6-10 → top (HDMI-A-1, 70 Hz)
+-- 3-finger swipe → previous / next workspace
+hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
+
+--------------------
+---- WORKSPACES ----
+--------------------
+-- workspaces 1-10 always exist; which monitor holds them comes from MACHINE (optional)
+local ws_monitor = machine.workspace or function() return nil end
 for i = 1, 10 do
+    local mon = ws_monitor(i)
     hl.workspace_rule({
         workspace  = tostring(i),
-        monitor    = (i <= 5) and "DP-2" or "HDMI-A-1",
-        default    = (i == 1 or i == 6),
+        monitor    = mon,
+        default    = mon ~= nil and (i == 1 or mon ~= ws_monitor(i - 1)),   -- first one per monitor
         persistent = true,
     })
 end
@@ -268,6 +301,11 @@ hl.bind("XF86AudioPause", exec("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPlay",  exec("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev",  exec("playerctl previous"),   { locked = true })
 
+-- laptop keys (no-ops on the desktop keyboard)
+hl.bind("XF86MonBrightnessUp",   exec(scripts .. "/brightness.sh up"),   { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", exec(scripts .. "/brightness.sh down"), { locked = true, repeating = true })
+hl.bind("XF86PowerOff",          exec(bin .. "/nothing-power"))   -- logind ignores the key (install.sh), so no instant power-off
+
 --------------------------------
 ---- WINDOW & LAYER RULES ------
 --------------------------------
@@ -308,5 +346,5 @@ hl.layer_rule({ name = "island-static", match = { namespace = "^nothing-island$"
 --------------------------------
 ---- MACHINE-LOCAL OVERRIDES ---
 --------------------------------
--- Optional, git-ignored: ~/.config/hypr/hyprland.local.lua (monitors, keyboard, extra binds …)
-pcall(dofile, os.getenv("HOME") .. "/.config/hypr/hyprland.local.lua")
+-- hyprland.local.lua's setup() runs last, so it can override anything above (see MACHINE)
+if machine.setup then machine.setup() end

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nothing settings hub (Super+I).  Also: nothing-settings <wifi|bluetooth|audio|displays|...>
+# Nothing settings hub (Super+I).  Also: nothing-settings <wifi|bluetooth|audio|displays|powermode|...>
 term() { kitty --class nothing-float -o initial_window_width=96c -o initial_window_height=28c "$@" & }
 edit() { term -e "${EDITOR:-nano}" "$1"; }
 cfg=~/.config/hypr
@@ -24,6 +24,12 @@ run() {
                 hyprctl hyprpaper wallpaper ",$cfg/wallpapers/$pick" >/dev/null
                 sed -i "s|^\(\s*path = \).*|\1$cfg/wallpapers/$pick|" "$cfg/hyprpaper.conf" ;;
     night)      exec nothing-night menu ;;
+    powermode)  command -v powerprofilesctl >/dev/null || { notify-send -a Power "power-profiles-daemon is not installed"; exit 1; }
+                cur=$(powerprofilesctl get)
+                pick=$(powerprofilesctl list | sed -n 's/^[* ]*\([a-z-]*\):$/\1/p' |
+                       rofi -dmenu -theme ~/.config/rofi/nothing.rasi -p "●" -mesg "now: $cur")
+                [ -n "$pick" ] || exit 0
+                powerprofilesctl set "$pick" && notify-send -a Power "Power mode" "$pick" ;;
     dnd)        swaync-client -d -sw >/dev/null; pkill -RTMIN+9 waybar ;;
     idle)       edit "$cfg/hypridle.conf" ;;
     lock)       edit "$cfg/hyprlock.conf" ;;
@@ -47,6 +53,7 @@ menu="󰤨   Wi-Fi & Network|wifi
 󰌌   Keyboard|keyboard
 󰸉   Wallpaper|wallpaper
 󰖔   Night Mode|night
+󰓅   Power Mode|powermode
 󰂛   Do Not Disturb|dnd
 󰒲   Idle & Sleep|idle
 󰌾   Lock Screen|lock

@@ -19,14 +19,16 @@ SUPER SHIFT ← ↑ → ↓   Move window
 SUPER CTRL ← ↑ → ↓    Resize window
 ALT Tab               Cycle windows
 SUPER Tab             Previous workspace
-SUPER 1–5             Workspaces (bottom monitor)
-SUPER 6–0             Workspaces (top monitor)
+SUPER 1–0             Workspaces 1–10
 SUPER SHIFT 1–0       Move window to workspace
 SUPER S               Scratchpad
 SUPER P  ·  SUPER J   Pseudotile · Toggle split
 PRINT                 Screenshot region → clipboard
 SHIFT PRINT           Screenshot → ~/Pictures
 SUPER SHIFT PRINT     Record screen (red dot in island)
+3-finger swipe        Previous / next workspace
+FN brightness keys    Screen brightness (laptop)
+POWER key             Power menu (laptop)
 SUPER SHIFT R         Reload desktop
 SUPER F1              This cheat-sheet
 KEYS

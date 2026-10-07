@@ -4,7 +4,7 @@
   "name": "desktop",
   "layer": "bottom",
   "position": "top",
-  "output": ["DP-2"],
+  "include": ["~/.config/waybar/local.jsonc"],
   "exclusive": false,
   "height": 340,
   "passthrough": false,

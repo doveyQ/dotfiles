@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Screen recording with a red Nothing-style dot in the island.
-#   record.sh toggle   start/stop (select region with slurp; Esc = full DP-2)
+#   record.sh toggle   start/stop (select region with slurp; Esc = full main screen)
 #   record.sh status   JSON for waybar
 #   record.sh state    true/false for swaync toggle
 sig() { pkill -RTMIN+8 waybar; }   # waybar status pill shows the red dot
+focused() { hyprctl -j monitors | python3 -c 'import json,sys; print(next(m["name"] for m in json.load(sys.stdin) if m["focused"]))'; }
 case "$1" in
   toggle)
     if pgrep -x wf-recorder >/dev/null; then
@@ -12,7 +13,7 @@ case "$1" in
     else
       geo=$(slurp 2>/dev/null)
       file=~/Videos/rec-$(date +%F_%H-%M-%S).mp4
-      if [ -n "$geo" ]; then wf-recorder -g "$geo" -f "$file" & else wf-recorder -o DP-2 -f "$file" & fi
+      if [ -n "$geo" ]; then wf-recorder -g "$geo" -f "$file" & else wf-recorder -o "${NOTHING_OUTPUT:-$(focused)}" -f "$file" & fi
       sleep 0.3; sig
     fi ;;
   status)

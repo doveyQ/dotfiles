@@ -1,0 +1,6 @@
+// Optional, per machine: copy to ~/.config/waybar/local.jsonc (git-ignored).
+// Both bars include it; anything set here applies where the main config leaves it out.
+// Without it the bars appear on every screen.
+{
+  "output": ["DP-2"]
+}

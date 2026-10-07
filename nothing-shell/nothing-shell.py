@@ -37,8 +37,8 @@ NOTIF_FILE = os.path.join(CACHE, "notifications.json")
 WEATHER_CACHE = os.path.join(HOME, ".cache", "nothing-weather.json")
 WEATHER_SCRIPT = os.path.join(HOME, ".config", "waybar", "scripts", "weather.py")
 CSS_FILE = os.environ.get("NOTHING_SHELL_CSS") or os.path.join(os.path.dirname(os.path.realpath(__file__)), "style.css")
-OUTPUT = os.environ.get("NOTHING_OUTPUT", "DP-2")
-WORKSPACES = range(1, 6) if OUTPUT == "DP-2" else range(1, 11)
+OUTPUT = os.environ.get("NOTHING_OUTPUT", "")   # "" → the primary / first screen
+WORKSPACES = range(1, int(os.environ.get("NOTHING_WORKSPACES", "10")) + 1)
 
 
 # ───────────────────────────── client mode ─────────────────────────────

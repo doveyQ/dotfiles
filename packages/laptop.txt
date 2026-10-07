@@ -1,0 +1,4 @@
+# Extra packages for laptops — install.sh adds these when a battery is present.
+brightnessctl          # backlight keys, dim before lock
+iio-sensor-proxy       # accelerometer → auto-rotation in tablet mode (convertibles)
+power-profiles-daemon  # Settings hub → Power Mode, battery click
