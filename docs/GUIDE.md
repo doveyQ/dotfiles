@@ -58,7 +58,7 @@ Workspaces 1–5 live on DP-2, 6–10 on HDMI-A-1. `Super`+`↑`/`↓` moves foc
 ### Fresh machine (EndeavourOS / Arch)
 
 ```bash
-git clone https://github.com/OWNER/dotfiles ~/dotfiles
+git clone https://github.com/doveyQ/dotfiles ~/dotfiles
 cd ~/dotfiles
 make dry-run      # optional: see exactly what will happen
 make install      # = ./install.sh

@@ -30,5 +30,5 @@ project uses [Semantic Versioning](https://semver.org/).
 - `bluetoothctl` no longer hangs the widgets when `bluetooth.service` is stopped.
 - Live-music equaliser in the island is vertically centred.
 
-[Unreleased]: https://github.com/OWNER/dotfiles/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/OWNER/dotfiles/releases/tag/v1.0.0
+[Unreleased]: https://github.com/doveyQ/dotfiles/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/doveyQ/dotfiles/releases/tag/v1.0.0

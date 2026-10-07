@@ -4,7 +4,7 @@
 
 **A Nothing OS–inspired Hyprland desktop: deep blacks, crisp whites, dot‑matrix type and one red accent.**
 
-[![CI](https://github.com/OWNER/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/dotfiles/actions/workflows/ci.yml)
+[![CI](https://github.com/doveyQ/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/doveyQ/dotfiles/actions/workflows/ci.yml)
 ![Hyprland](https://img.shields.io/badge/Hyprland-0.56%2B%20·%20Lua-000000?logo=hyprland&logoColor=white)
 ![Arch](https://img.shields.io/badge/Arch%20%2F%20EndeavourOS-000000?logo=archlinux&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-d71921)](LICENSE)
@@ -56,7 +56,7 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 ## Install
 
 ```bash
-git clone https://github.com/OWNER/dotfiles ~/dotfiles
+git clone https://github.com/doveyQ/dotfiles ~/dotfiles
 cd ~/dotfiles
 make dry-run            # optional: preview every action
 make install            # packages, keyboard/services, fonts, symlinks — asks before installing
