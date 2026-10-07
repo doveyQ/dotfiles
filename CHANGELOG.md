@@ -6,6 +6,13 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Night mode** (`nothing-night`, hyprsunset): smooth fade, warmth presets, schedule with
+  presets or custom times; manual toggles override until the next scheduled switch.
+  In the settings hub, as a control-center tile, `Super+Ctrl+N`, and a moon in the island.
+- **Boot lock** (`./install.sh --boot-lock`): greetd autologin starts Hyprland already
+  locked by hyprlock, replacing the KDE-styled login screen; `--restore-login` undoes it.
+
 ### Changed
 - Idle: lock after 15 minutes (was 5), screens off at 15:30, suspend after 1 hour (was 30 minutes).
 

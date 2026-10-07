@@ -294,6 +294,15 @@ class Sys:
         return "MUTED" not in run(["wpctl", "get-volume", "@DEFAULT_AUDIO_SOURCE@"])
 
     @staticmethod
+    def night():
+        base = os.environ.get("XDG_STATE_HOME", os.path.join(HOME, ".local", "state"))
+        try:
+            with open(os.path.join(base, "nothing", "night.json")) as f:
+                return bool(json.load(f).get("on"))
+        except (OSError, ValueError):
+            return False
+
+    @staticmethod
     def recording():
         return run(["pgrep", "-x", "wf-recorder"]) != ""
 
@@ -546,7 +555,9 @@ class Island(LayerWindow):
         self.c_weather = label("", "c-weather")
         self.c_clock = label("", "c-clock", xalign=0.5)
         self.c_vol = label("", "c-vol")
-        for w in (self.rec, self.eq, self.ws_box, self.c_weather, self.c_clock, self.c_vol):
+        self.c_night = label("󰖔", "c-night")
+        self.c_night.set_tooltip_text("Night mode")
+        for w in (self.rec, self.eq, self.ws_box, self.c_weather, self.c_clock, self.c_night, self.c_vol):
             self.compact.pack_start(w, False, False, 0)
         self.shell_box.pack_start(self.compact, False, False, 0)
 
@@ -563,6 +574,7 @@ class Island(LayerWindow):
         self.revealer.set_visible(False)
         self.rec.set_visible(False)
         self.eq.set_visible(False)
+        self.c_night.set_visible(False)
         self.refresh_compact()
 
     # ── panel layout ──
@@ -813,6 +825,7 @@ class Island(LayerWindow):
         vol, muted = Sys.volume()
         self.c_vol.set_visible(muted)
         self.c_vol.set_text("󰝟")
+        self.c_night.set_visible(Sys.night())
 
     def refresh_panel(self, light=False):
         self.p_clock.set_text(time.strftime("%H:%M"))
@@ -1156,11 +1169,12 @@ class Control(LayerWindow):
         root.pack_start(th, False, False, 0)
 
         # toggles
-        tg = box(spacing=10)
+        tg = box(spacing=7)
         tg.set_homogeneous(True)
         self.toggles = {}
         for key, glyph, name in (("wifi", "󰤨", "WI-FI"), ("bt", "󰂯", "BLUETOOTH"),
-                                 ("dnd", "󰂛", "SILENT"), ("mic", "󰍬", "MIC")):
+                                 ("dnd", "󰂛", "SILENT"), ("mic", "󰍬", "MIC"),
+                                 ("night", "󰖔", "NIGHT")):
             b = Gtk.Button()
             add_cls(b, "tile")
             col = box(vertical=True, spacing=4)
@@ -1335,7 +1349,8 @@ class Control(LayerWindow):
             tile, lbl = self.temps[k]
             lbl.set_text(f"{v:.0f}°")
             set_cls(tile, "hot", v >= limits[k])
-        in_thread(lambda: {"wifi": Sys.wifi_on(), "bt": Sys.bt_on(), "dnd": Sys.dnd(), "mic": Sys.mic_on()},
+        in_thread(lambda: {"wifi": Sys.wifi_on(), "bt": Sys.bt_on(), "dnd": Sys.dnd(), "mic": Sys.mic_on(),
+                            "night": Sys.night()},
                   self._apply_toggles)
 
     def _apply_toggles(self, st):
@@ -1364,6 +1379,8 @@ class Shell:
         GLib.timeout_add(1500, self._sample)
         GLib.timeout_add_seconds(5, self._compact_tick)
         GLib.timeout_add_seconds(900, self._weather_tick)
+        GLib.timeout_add_seconds(2, self._night_start)
+        GLib.timeout_add_seconds(60, self._night_tick)
         self._weather_tick()
 
     def _load_css(self):
@@ -1391,6 +1408,19 @@ class Shell:
         self.island.refresh_compact()
         return True
 
+    def _night_start(self):
+        in_thread(lambda: run(["nothing-night", "apply"], 10), lambda _r: self.night_changed())
+        return False
+
+    def _night_tick(self):
+        in_thread(lambda: run(["nothing-night", "tick"], 10))
+        return True
+
+    def night_changed(self):
+        self.island.refresh_compact()
+        if self.control.open:
+            self.control.refresh()
+
     def _weather_tick(self):
         if os.path.exists(WEATHER_SCRIPT):
             in_thread(lambda: run([WEATHER_SCRIPT, "bar"], timeout=15), lambda _r: self.island.refresh_compact())
@@ -1410,6 +1440,8 @@ class Shell:
             elif key == "dnd":
                 run(["swaync-client", "-d"])
                 spawn("pkill -RTMIN+9 waybar")
+            elif key == "night":
+                run(["nothing-night", "toggle"], 5)
             elif key == "mic":
                 run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
 
@@ -1507,6 +1539,8 @@ class Shell:
             self.control.toggle(how)
         elif cmd == "notif-status":
             return self.notifs.status()
+        elif cmd == "night-changed":
+            GLib.idle_add(lambda: (self.night_changed(), False)[1])
         elif cmd == "notif-clear":
             self.notifs.clear()
         elif cmd == "debug":

@@ -48,6 +48,10 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 - **Power overlay** — full‑screen dim with five tiles and single‑key accelerators.
 - **Settings hub** — Wi‑Fi, Bluetooth, Sound, Displays, Appearance, Keyboard, Wallpaper,
   DND, idle/lock, configs, keybinding cheat‑sheet. Also in the app launcher as *Settings*.
+- **Night mode** — warm screen via hyprsunset with a smooth fade, warmth presets and a
+  schedule (presets or custom times). Settings hub, control-center tile or `Super` `Ctrl` `N`.
+- **Boot lock** (optional) — boot straight into the Nothing lock screen instead of the KDE
+  login screen: `./install.sh --boot-lock`.
 - **One lock screen** — hyprlock only: giant Ndot clock, blur, battery/AC readout,
   now‑playing, keyboard‑layout chip, red‑accented password pill.
 - **Austrian German, no dead keys** everywhere: Hyprland, hyprlock, login screen, TTY.
@@ -80,6 +84,8 @@ The installer is idempotent — `make update` pulls and relinks.
 | `--copy` | copy files instead of symlinking |
 | `--dry-run` | print every action without changing anything |
 | `-y` | don't ask before installing packages |
+| `--boot-lock` | boot into hyprlock (greetd autologin) instead of the KDE login screen |
+| `--restore-login` | undo `--boot-lock` |
 
 What it does:
 
@@ -107,6 +113,7 @@ dotfiles/
 ├── docs/GUIDE.md        the full manual
 ├── scripts/check.sh     linters + config validation (make check, CI)
 ├── packages/            pacman.txt · aur.txt
+├── system/greetd/       boot-lock login config (opt-in, --boot-lock)
 ├── hypr/                → ~/.config/hypr
 │   ├── hyprland.lua     main config (Hyprland ≥ 0.56 uses Lua, not hyprland.conf)
 │   ├── hyprlock.conf    lock screen
@@ -136,6 +143,7 @@ dotfiles/
 | `Super` `A` | Pin the dynamic island open |
 | `Super` `Shift` `X` | Power menu — `P` power off · `R` reboot · `S` sleep · `L` lock · `E` log out · `Esc` |
 | `Super` `L` | Lock |
+| `Super` `Ctrl` `N` | Night mode on / off |
 | `Super` `Q` | Close window |
 | `Super` `Space` | Toggle floating |
 | `Super` `F` | Fullscreen |

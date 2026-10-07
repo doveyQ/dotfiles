@@ -8,6 +8,8 @@
 #   ./install.sh --copy          copy files instead of symlinking
 #   ./install.sh --dry-run       print what would happen
 #   ./install.sh -y              don't ask before installing packages
+#   ./install.sh --boot-lock     boot straight into hyprlock (greetd autologin, replaces the login screen)
+#   ./install.sh --restore-login undo --boot-lock: re-enable the previous login screen
 #
 set -euo pipefail
 
@@ -28,9 +30,10 @@ declare -A BINS=(
   [nothing-power]="rofi/scripts/powermenu.sh"
   [nothing-keybinds]="rofi/scripts/keybinds.sh"
   [nothing-reload]="hypr/scripts/nothing-reload.sh"
+  [nothing-night]="hypr/scripts/nothing-night.py"
 )
 
-DO_PACKAGES=1 DO_SYSTEM=1 DO_FONTS=1 MODE=link DRY=0 YES=0
+DO_PACKAGES=1 DO_SYSTEM=1 DO_FONTS=1 MODE=link DRY=0 YES=0 BOOT_LOCK=0 RESTORE_LOGIN=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -41,7 +44,9 @@ for arg in "$@"; do
     --copy)       MODE=copy ;;
     --dry-run)    DRY=1 ;;
     -y|--yes)     YES=1 ;;
-    -h|--help)    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --boot-lock)  BOOT_LOCK=1 ;;
+    --restore-login) RESTORE_LOGIN=1; DO_PACKAGES=0; DO_SYSTEM=0; DO_FONTS=0 ;;
+    -h|--help)    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $arg (see --help)"; exit 1 ;;
   esac
 done
@@ -122,6 +127,42 @@ if ((DO_SYSTEM)); then
   info "hyprlock is the only locker (hypridle → loginctl lock-session → hyprlock)"
 fi
 
+# ── 2b. boot lock: greetd autologin → Hyprland starts locked by hyprlock ──────────
+DM_MARK=/etc/greetd/.nothing-previous-dm
+current_dm() { basename "$(readlink -f /etc/systemd/system/display-manager.service 2>/dev/null)" .service; }
+
+if ((BOOT_LOCK)); then
+  step "Boot lock (greetd → hyprlock)"
+  flags=(--needed); ((YES)) && flags+=(--noconfirm)
+  run sudo pacman -S "${flags[@]}" greetd greetd-tuigreet
+  prev=$(current_dm)
+  if [[ -f /etc/greetd/config.toml && ! -f $DM_MARK ]]; then
+    run sudo cp /etc/greetd/config.toml /etc/greetd/config.toml.orig
+  fi
+  if ((DRY)); then
+    info "would write /etc/greetd/config.toml for user $USER"
+  else
+    sed "s/@USER@/$USER/" "$REPO/system/greetd/config.toml" | sudo tee /etc/greetd/config.toml >/dev/null
+  fi
+  if [[ -n $prev && $prev != greetd ]]; then
+    ((DRY)) || echo "$prev" | sudo tee "$DM_MARK" >/dev/null
+    run sudo systemctl disable "$prev"
+  fi
+  run sudo systemctl enable greetd       # no --now: switching live would end this session
+  info "active from the next boot (previous login screen: ${prev:-none}) — undo with --restore-login"
+fi
+
+if ((RESTORE_LOGIN)); then
+  step "Restore previous login screen"
+  prev=$(cat "$DM_MARK" 2>/dev/null || true)
+  prev=${prev:-plasmalogin}
+  run sudo systemctl disable greetd
+  run sudo systemctl enable "$prev"
+  [[ -f /etc/greetd/config.toml.orig ]] && run sudo mv /etc/greetd/config.toml.orig /etc/greetd/config.toml
+  run sudo rm -f "$DM_MARK"
+  info "$prev is the login screen again from the next boot"
+fi
+
 # ── 3. fonts ─────────────────────────────────────────
 if ((DO_FONTS)); then
   step "Fonts"
@@ -168,7 +209,7 @@ for name in "${!BINS[@]}"; do
   place "$REPO/${BINS[$name]}" "$BIN/$name"
 done
 for f in "$REPO"/applications/*.desktop; do place "$f" "$APPS/$(basename "$f")"; done
-run chmod +x "$REPO"/hypr/scripts/*.sh "$REPO"/waybar/scripts/*.sh "$REPO"/waybar/scripts/*.py "$REPO"/rofi/scripts/*.sh
+run chmod +x "$REPO"/hypr/scripts/*.sh "$REPO"/hypr/scripts/*.py "$REPO"/waybar/scripts/*.sh "$REPO"/waybar/scripts/*.py "$REPO"/rofi/scripts/*.sh
 command -v update-desktop-database >/dev/null && run update-desktop-database -q "$APPS" || true
 
 # ── 5. verify ─────────────────────────────────────────

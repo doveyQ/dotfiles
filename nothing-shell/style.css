@@ -93,6 +93,7 @@ button {
 }
 .c-weather, .c-vol { font-size: 12px; font-weight: 600; color: #d6d6d6; }
 .c-vol { color: @red; }
+.c-night { font-family: "Symbols Nerd Font"; font-size: 13px; color: #d6d6d6; }
 
 .rec-dot { color: @red; font-size: 14px; animation: blink 1.1s steps(2, start) infinite; }
 @keyframes blink { to { color: transparent; } }
@@ -197,8 +198,9 @@ scale.nscale slider:hover { background: @red; }
   background: @card;
   border: 1px solid @line;
   border-radius: 22px;
-  padding: 12px 4px;
+  padding: 12px 0;
 }
+.tile .tiny { font-size: 8.5px; letter-spacing: 0.5px; }
 .tile:hover { background: #2c2c2c; }
 .tile.on { background: @fg; border-color: @fg; }
 .tile.on label { color: #000; }

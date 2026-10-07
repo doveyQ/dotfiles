@@ -23,6 +23,7 @@ run() {
                 [ -n "$pick" ] || exit 0
                 hyprctl hyprpaper wallpaper ",$cfg/wallpapers/$pick" >/dev/null
                 sed -i "s|^\(\s*path = \).*|\1$cfg/wallpapers/$pick|" "$cfg/hyprpaper.conf" ;;
+    night)      exec nothing-night menu ;;
     dnd)        swaync-client -d -sw >/dev/null; pkill -RTMIN+9 waybar ;;
     idle)       edit "$cfg/hypridle.conf" ;;
     lock)       edit "$cfg/hyprlock.conf" ;;
@@ -45,6 +46,7 @@ menu="󰤨   Wi-Fi & Network|wifi
 󰏘   Appearance|appearance
 󰌌   Keyboard|keyboard
 󰸉   Wallpaper|wallpaper
+󰖔   Night Mode|night
 󰂛   Do Not Disturb|dnd
 󰒲   Idle & Sleep|idle
 󰌾   Lock Screen|lock

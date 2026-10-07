@@ -8,6 +8,7 @@ SUPER N               Control center
 SUPER A               Dynamic island (pin open)
 SUPER SHIFT X         Power menu  (p r s l e)
 SUPER L               Lock (hyprlock)
+SUPER CTRL N          Night mode on / off
 SUPER Q               Close window
 SUPER Space           Toggle floating
 SUPER F               Fullscreen

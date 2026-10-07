@@ -43,6 +43,7 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
     hl.exec_cmd("hyprpaper")
     hl.exec_cmd("hypridle")                                   -- the ONLY idle/lock manager → hyprlock
+    hl.exec_cmd("hyprsunset -i")                              -- night mode backend (nothing-night drives it)
     hl.exec_cmd("swaync")                                     -- notification popups
     hl.exec_cmd(bin .. "/nothing-shell")                      -- dynamic island + control center
     hl.exec_cmd("waybar")                                     -- logo + status pill
@@ -214,6 +215,7 @@ hl.bind(mod .. " + SHIFT + X",    exec(bin .. "/nothing-power"))
 hl.bind(mod .. " + N",            exec(bin .. "/nothing-shell control toggle"))
 hl.bind(mod .. " + A",            exec(bin .. "/nothing-shell island toggle"))
 hl.bind(mod .. " + SHIFT + N",    exec(bin .. "/nothing-settings dnd"))
+hl.bind(mod .. " + CTRL + N",     exec(bin .. "/nothing-night toggle"))
 hl.bind(mod .. " + V",            exec("cliphist list | rofi -dmenu -theme ~/.config/rofi/nothing.rasi | cliphist decode | wl-copy"))
 hl.bind(mod .. " + F1",           exec(bin .. "/nothing-keybinds"))
 hl.bind(mod .. " + L",            exec("loginctl lock-session"))   -- → hypridle → hyprlock

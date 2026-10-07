@@ -88,6 +88,28 @@ Then **log out → choose “Hyprland” on the login screen** (not “Hyprland 
 Because configs are **symlinks**, editing `~/.config/hypr/hyprland.lua` *is* editing the repo.
 `git status` in `~/dotfiles` shows every change you made.
 
+### Boot straight into the lock screen (optional)
+
+By default the login screen at boot is your display manager's (on this machine KDE's
+*Plasma Login*), which can't look like hyprlock. To make the **Nothing lock screen the
+first thing you see**:
+
+```bash
+./install.sh --boot-lock        # installs greetd + tuigreet, takes effect at next boot
+./install.sh --restore-login    # back to the previous login screen
+```
+
+How it works: greetd logs you in automatically and starts
+`start-hyprland -- --locked-cmd hyprlock`, so Hyprland comes up **already locked** — no
+desktop frame is ever shown before hyprlock, and if hyprlock failed the session would stay
+locked (see §9). After you log out you get a minimal text greeter (tuigreet; `F3` picks
+another session, e.g. Plasma).
+
+Trade-off: the password is checked by hyprlock *after* login, so PAM modules that unlock
+things at login (KWallet / GNOME Keyring) don't run — apps using them will ask for the
+wallet password once. Full-disk encryption is the right protection for data at rest
+either way.
+
 ### Different hardware?
 
 The defaults are for this machine. On another one, edit before (or right after) installing:
@@ -152,6 +174,26 @@ Appearance (nwg-look: GTK theme, icons, cursor) · Keyboard · Wallpaper picker 
 Do Not Disturb · Idle & Sleep · Lock Screen · Hyprland Config · Keybindings · Reload Desktop ·
 KDE System Settings. Each entry also works directly: `nothing-settings wifi`, `… audio`, etc.
 
+### Night mode
+
+Warms the screen colour (hyprsunset) with a smooth ~1 s fade. A small moon appears in the
+island while it is on.
+
+| Where | How |
+|---|---|
+| keys | `Super` `Ctrl` `N` toggles |
+| control center | **NIGHT** tile |
+| settings hub | **Night Mode** → on/off · warmth · schedule |
+| terminal | `nothing-night on\|off\|toggle`, `nothing-night temp 3500`, `nothing-night schedule 21:30 06:45`, `nothing-night schedule off`, `nothing-night status` |
+
+**Warmth presets:** 5500 K subtle · 4500 warm · **4000 default** · 3500 very warm · 2800 candle.
+**Schedule presets:** Evening 20:00→07:00 · Late 22:00→06:30 · Long 19:00→08:00, or *Custom times…*
+(24-hour `HH:MM`; windows may cross midnight). A manual toggle wins until the schedule's next
+switch — e.g. turning it off at 21:00 keeps it off until 07:00, then the schedule resumes.
+You get a quiet notification when the schedule switches.
+
+State is machine-local: `~/.local/state/nothing/night.json`.
+
 ### Locking & idle
 
 `Super` `L`, the power menu and the control center all call `loginctl lock-session`.
@@ -192,7 +234,7 @@ dot when there is history; `Super` `Shift` `N` (or right-click the bell) toggles
 ### Startup
 
 Hyprland reads `hypr/hyprland.lua`; the `hyprland.start` hook launches, in order:
-polkit agent → hyprpaper → **hypridle** → swaync → **nothing-shell** → waybar (bar) →
+polkit agent → hyprpaper → **hypridle** → hyprsunset → swaync → **nothing-shell** → waybar (bar) →
 waybar (desktop widgets) → nwg-dock → clipboard watcher.
 
 ### nothing-shell
@@ -263,6 +305,8 @@ dot, `-RTMIN+9` the notification bell.
 |---|---|
 | `~/.cache/nothing-weather.json` | weather cache |
 | `~/.cache/nothing-shell/` | notification history, album-art cache |
+| `~/.local/state/nothing/night.json` | night-mode state and schedule |
+| `/etc/greetd/config.toml` | only with `--boot-lock` (template: `system/greetd/config.toml`) |
 | `~/.local/share/fonts/nothing/` | Ndot / NType fonts |
 | `~/.config-backup/<timestamp>/` | your configs from before the first install |
 
@@ -377,6 +421,8 @@ Packages are left installed; remove them with `sudo pacman -Rns …` if you want
 | Bluetooth toggle does nothing, `bluetoothctl` hangs | `sudo systemctl enable --now bluetooth` |
 | Wrong keys / dead keys on the login screen or TTY | `sudo localectl set-x11-keymap at pc105 nodeadkeys` · `sudo localectl set-keymap --no-convert de-latin1-nodeadkeys` |
 | **“Oopsie daisy … lockscreen app died”** | `Ctrl+Alt+F3`, log in, `hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()'`, back with `Ctrl+Alt+F1/F2`. Never kill hyprlock to “unlock”. |
+| Login screen at boot looks like KDE | that's the display manager — `./install.sh --boot-lock` (see §2) |
+| Night mode does nothing | `pacman -Q hyprsunset`; `pgrep hyprsunset`; `nothing-night status` |
 | Screens stay black after idle | press a key / move the mouse; or `hyprctl dispatch 'hl.dsp.dpms({ action = "on" })'` |
 | Weather shows `--` | offline or wttr.in down; `~/.config/waybar/scripts/weather.py bar` to test |
 | No album art | the player doesn't publish `mpris:artUrl` (common for browser tabs) — a dot placeholder is shown |

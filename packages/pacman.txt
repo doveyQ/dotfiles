@@ -3,6 +3,7 @@ hyprland
 hyprpaper
 hyprlock
 hypridle
+hyprsunset
 hyprpolkitagent
 xdg-desktop-portal-hyprland
 xdg-desktop-portal-gtk

@@ -1,0 +1,19 @@
+# greetd — boot straight into Hyprland, already locked by hyprlock.
+# Installed to /etc/greetd/config.toml by `./install.sh --boot-lock` (@USER@ is replaced).
+#
+# • initial_session runs once per boot: autologin + Hyprland starts in the locked state
+#   (`--locked-cmd`), so the first thing on screen is the Nothing lock screen and your
+#   password is checked by hyprlock. Nothing is shown before the lock is up.
+# • default_session is the fallback after you log out: a minimal text greeter (tuigreet).
+#   F3 there lets you pick another session, e.g. Plasma.
+
+[terminal]
+vt = 1
+
+[initial_session]
+command = "start-hyprland -- --locked-cmd hyprlock"
+user = "@USER@"
+
+[default_session]
+command = "tuigreet --time --remember --remember-user-session --asterisks --greeting 'nothing' --sessions /usr/share/wayland-sessions --cmd start-hyprland"
+user = "greeter"
