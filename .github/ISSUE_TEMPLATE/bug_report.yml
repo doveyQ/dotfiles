@@ -1,0 +1,34 @@
+name: Bug report
+description: Something looks or behaves wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect instead? Screenshots help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Hover the island\n2. …"
+  - type: input
+    id: hyprland
+    attributes:
+      label: Hyprland version
+      description: Output of `hyprctl version | head -1`
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [island / control center, waybar, lock screen / idle, rofi menus, notifications, install.sh, other]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "`hyprctl configerrors`, or run `nothing-shell quit; nothing-shell` in a terminal and paste the output"
+      render: text

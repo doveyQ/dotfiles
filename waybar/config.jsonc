@@ -1,0 +1,86 @@
+// Nothing OS — top bar
+// Left: logo pill · Center: (dynamic island drawn by nothing-shell) · Right: status pill
+{
+  "layer": "top",
+  "position": "top",
+  "output": ["DP-2"],          // main screen only — add "HDMI-A-1" to mirror on the top monitor
+  "height": 36,
+  "margin-top": 8,
+  "margin-left": 12,
+  "margin-right": 12,
+  "spacing": 0,
+  "exclusive": true,
+  "reload_style_on_change": true,
+
+  "modules-left":   ["custom/logo"],
+  "modules-right":  ["group/system"],
+
+  // ────────────── LEFT ──────────────
+  "custom/logo": {
+    "format": "",
+    "tooltip": false,
+    "tooltip": false,
+    "on-click": "rofi -show drun -theme ~/.config/rofi/nothing.rasi",
+    "on-click-right": "~/.local/bin/nothing-settings"
+  },
+
+  // ────────────── RIGHT ──────────────
+  "group/system": {
+    "orientation": "horizontal",
+    "modules": [
+      "tray",
+      "custom/record",
+      "custom/clipboard",
+      "cpu",
+      "memory",
+      "custom/notification",
+      "custom/power"
+    ]
+  },
+
+  "tray": { "icon-size": 15, "spacing": 10 },
+
+  "custom/clipboard": {
+    "format": "󰅌",
+    "tooltip-format": "Clipboard history",
+    "on-click": "cliphist list | rofi -dmenu -theme ~/.config/rofi/nothing.rasi | cliphist decode | wl-copy"
+  },
+
+  "cpu": {
+    "format": "󰍛 {usage}",
+    "interval": 3,
+    "tooltip": false,
+    "on-click": "~/.local/bin/nothing-shell control toggle"
+  },
+  "memory": {
+    "format": "󰘚 {percentage}",
+    "interval": 5,
+    "tooltip-format": "{used:0.1f} / {total:0.1f} GiB",
+    "on-click": "~/.local/bin/nothing-shell control toggle"
+  },
+
+  "custom/record": {
+    "exec": "~/.config/hypr/scripts/record.sh status",
+    "return-type": "json",
+    "interval": 5,
+    "signal": 8,
+    "on-click": "~/.config/hypr/scripts/record.sh toggle"
+  },
+
+  "custom/notification": {
+    "exec": "~/.local/bin/nothing-shell notif-status",
+    "return-type": "json",
+    "interval": 30,
+    "signal": 9,
+    "on-click": "~/.local/bin/nothing-shell control toggle",
+    "on-click-right": "~/.local/bin/nothing-settings dnd",
+    "escape": false
+  },
+
+  "custom/power": {
+    "format": "󰐥",
+    "tooltip-format": "Power menu  (Super+Shift+X)",
+    "on-click": "~/.local/bin/nothing-power",
+    "on-click-right": "loginctl lock-session"
+  }
+}

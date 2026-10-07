@@ -1,0 +1,77 @@
+/* Nothing OS — floating island
+   black #000 · surface #141414 · glass #1e1e1e/80% · white #fff · red #d71921 */
+
+@define-color bg      rgba(20, 20, 20, 0.92);
+@define-color glass   rgba(30, 30, 30, 0.80);
+@define-color line    rgba(255, 255, 255, 0.08);
+@define-color fg      #ffffff;
+@define-color dim     #8a8a8a;
+@define-color red     #d71921;
+
+* {
+  font-family: "Inter", "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+window#waybar {
+  background: transparent;
+  color: @fg;
+}
+
+tooltip {
+  background: @bg;
+  border: 1px solid @line;
+  border-radius: 14px;
+}
+tooltip label { color: @fg; padding: 4px 6px; }
+
+/* ── pills ─────────────────────────────── */
+#custom-logo,
+#system {
+  background: @bg;
+  border: 1px solid @line;
+  border-radius: 999px;
+  transition: background 200ms ease;
+}
+
+#custom-logo {
+  font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font";
+  font-size: 17px;
+  min-width: 34px;
+  padding: 0 4px;
+}
+#custom-logo:hover { background: @fg; color: #000; }
+
+#system { padding: 0 12px; }
+#tray, #custom-clipboard, #cpu, #memory,
+#custom-notification, #custom-power { padding: 0 8px; }
+
+/* ── right pill ── */
+#system label, #tray { color: #d0d0d0; }
+#cpu, #memory { font-family: "Ndot 55", "Inter"; font-size: 13px; letter-spacing: 1px; }
+#custom-notification,
+#custom-clipboard,
+#custom-power { font-size: 15px; }
+#custom-notification.dnd { color: @dim; }
+#custom-power { color: @fg; }
+#cpu:hover, #memory:hover,
+#custom-power:hover,
+#custom-clipboard:hover,
+#custom-notification:hover { color: @red; }
+#tray > .needs-attention { -gtk-icon-effect: highlight; }
+
+/* ── red recording dot ── */
+#custom-record { padding: 0; }
+#custom-record.recording {
+  color: @red;
+  font-size: 15px;
+  padding: 0 8px 0 4px;
+  animation: blink 1.2s steps(2, start) infinite;
+}
+@keyframes blink { to { color: transparent; } }

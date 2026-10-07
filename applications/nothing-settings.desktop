@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Settings
+GenericName=Nothing Settings Hub
+Comment=Wi-Fi, Bluetooth, Sound, Displays, Appearance, Keyboard, Wallpaper
+Exec=nothing-settings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;
+Keywords=settings;wifi;bluetooth;audio;sound;display;monitor;config;control;

@@ -1,0 +1,10 @@
+window { background: transparent; }
+#box {
+  background: rgba(20, 20, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 6px 10px;
+}
+button { background: transparent; border: none; border-radius: 12px; padding: 4px; margin: 0 2px; }
+button:hover { background: rgba(255, 255, 255, 0.10); }
+#active { border-bottom: 2px solid #d71921; }

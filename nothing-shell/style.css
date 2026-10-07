@@ -1,0 +1,227 @@
+/* nothing-shell — Nothing OS monochrome · dot-matrix
+   black #000 · surface #141414 · card #1e1e1e/80% · line rgba(255,255,255,.07)
+   white #fff · dim #8a8a8a · red #d71921                                           */
+
+@define-color bg     rgba(12, 12, 12, 0.94);
+@define-color card   rgba(30, 30, 30, 0.80);
+@define-color card2  rgba(42, 42, 42, 0.85);
+@define-color line   rgba(255, 255, 255, 0.07);
+@define-color fg     #ffffff;
+@define-color dim    #8a8a8a;
+@define-color red    #d71921;
+
+* {
+  font-family: "Inter", "Symbols Nerd Font", "JetBrainsMono Nerd Font", sans-serif;
+  font-size: 13px;
+  color: @fg;
+  text-shadow: none;
+  -gtk-icon-shadow: none;
+}
+
+window.nothing-layer { background: transparent; }
+
+.dim   { color: @dim; }
+.tiny  { font-size: 10px; font-weight: 600; letter-spacing: 1px; }
+.glyph { font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font"; font-size: 16px; }
+
+.card {
+  background: @card;
+  border: 1px solid @line;
+  border-radius: 24px;
+  padding: 14px 16px;
+}
+
+/* ── generic buttons ── */
+button {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  padding: 0;
+  min-height: 0;
+  min-width: 0;
+  transition: all 160ms cubic-bezier(.2, .9, .1, 1);
+}
+.nbtn.round {
+  min-width: 38px; min-height: 38px;
+  border-radius: 999px;
+  background: @card2;
+}
+.nbtn.round:hover  { background: #3a3a3a; }
+.nbtn.round:active { background: @fg; }
+.nbtn.round:active label { color: #000; }
+.nbtn.round.on, .nbtn.round.play.on { background: @fg; }
+.nbtn.round.on label { color: #000; }
+.nbtn.mini { min-width: 22px; min-height: 22px; border-radius: 999px; }
+.nbtn.mini label { font-size: 12px; color: @dim; }
+.nbtn.mini:hover { background: @red; }
+.nbtn.mini:hover label { color: @fg; }
+
+.chip {
+  border-radius: 999px;
+  background: @card2;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.chip:hover { background: #3a3a3a; }
+.chip.offline label { color: @red; }
+.danger-hover:hover { background: @red; }
+
+/* ══════════════ ISLAND ══════════════ */
+.island {
+  background: @bg;
+  border: 1px solid @line;
+  border-radius: 999px;
+  padding: 0 14px;
+  min-height: 36px;
+  transition: border-radius 260ms cubic-bezier(.2, .9, .1, 1),
+              background 260ms ease, padding 260ms ease;
+}
+.island.expanded {
+  border-radius: 34px;
+  padding: 0 18px 18px 18px;
+  background: rgba(8, 8, 8, 0.96);
+}
+.island-compact { min-height: 36px; }
+
+.c-clock {
+  font-family: "Ndot 57", "Inter";
+  font-size: 17px;
+  letter-spacing: 1px;
+  padding: 0 4px;
+}
+.c-weather, .c-vol { font-size: 12px; font-weight: 600; color: #d6d6d6; }
+.c-vol { color: @red; }
+
+.rec-dot { color: @red; font-size: 14px; animation: blink 1.1s steps(2, start) infinite; }
+@keyframes blink { to { color: transparent; } }
+
+/* workspace dots → active becomes a white pill */
+.ws-dot {
+  min-width: 6px; min-height: 6px;
+  border-radius: 999px;
+  background: #2b2b2b;
+  transition: all 240ms cubic-bezier(.2, .9, .1, 1);
+}
+.ws-dot.occupied { background: #6a6a6a; }
+.ws-dot.active   { min-width: 22px; background: @fg; }
+.ws-dot.urgent   { background: @red; }
+.ws-dot:hover    { background: #a0a0a0; }
+
+/* expanded panel */
+.island-panel { padding-top: 10px; }
+.p-date { font-family: "Ndot 55", "Inter"; font-size: 12px; letter-spacing: 2px; color: @dim; }
+.p-clock { font-family: "Ndot 57", "Inter"; font-size: 64px; letter-spacing: 4px; }
+
+.weather-card { padding: 12px 18px; }
+.w-icon { font-family: "Symbols Nerd Font"; font-size: 40px; min-width: 52px; }
+.w-temp { font-family: "Ndot 57", "Inter"; font-size: 28px; }
+.w-cond { font-size: 12px; font-weight: 600; }
+.w-meta { font-size: 9px; letter-spacing: 1px; color: @dim; font-weight: 600; }
+.w-day-icon { font-family: "Symbols Nerd Font"; font-size: 18px; }
+
+/* calendar */
+.cal-card { padding: 10px 12px; }
+calendar.ncal {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  padding: 2px;
+}
+calendar.ncal.header { border: none; background: transparent; }
+calendar.ncal.button { color: @dim; background: transparent; border: none; }
+calendar.ncal.button:hover { color: @fg; }
+calendar.ncal.highlight { color: @dim; font-weight: 700; font-size: 9px; }
+calendar.ncal:indeterminate { color: #3c3c3c; }
+calendar.ncal:selected {
+  background: @red;
+  color: @fg;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* media */
+.media-card { padding: 14px; }
+.m-player { font-family: "Ndot 55", "Inter"; font-size: 11px; letter-spacing: 2px; color: @dim; }
+.m-player.live { color: @red; }
+.m-title { font-size: 15px; font-weight: 700; }
+.m-artist { font-size: 12px; }
+.nbtn.round.play { min-width: 44px; min-height: 44px; }
+
+/* quick row */
+.quick-row { padding: 10px 14px; border-radius: 999px; }
+.vol-pct { font-family: "Ndot 57", "Inter"; font-size: 16px; min-width: 34px; }
+
+scale.nscale trough {
+  min-height: 8px;
+  border-radius: 999px;
+  background: #2f2f2f;
+  border: none;
+}
+scale.nscale highlight {
+  border-radius: 999px;
+  background: @fg;
+  border: none;
+}
+scale.nscale slider {
+  min-width: 16px; min-height: 16px;
+  margin: -5px;
+  border-radius: 999px;
+  background: @fg;
+  border: 3px solid #0c0c0c;
+  box-shadow: none;
+  transition: all 120ms ease;
+}
+scale.nscale slider:hover { background: @red; }
+
+/* ══════════════ CONTROL CENTER ══════════════ */
+.control {
+  background: rgba(8, 8, 8, 0.95);
+  border: 1px solid @line;
+  border-radius: 32px;
+  padding: 18px;
+}
+.red-dot { color: @red; font-size: 11px; }
+.cc-title { font-family: "Ndot 57", "Inter"; font-size: 16px; letter-spacing: 2px; }
+.stat-key { font-family: "Ndot 55", "Inter"; font-size: 12px; letter-spacing: 2px; color: @dim; }
+.stat-val { font-family: "Ndot 57", "Inter"; font-size: 15px; letter-spacing: 1px; }
+.section  { font-family: "Ndot 55", "Inter"; font-size: 12px; letter-spacing: 2px; color: @dim; }
+
+.temp-tile { padding: 10px 6px; border-radius: 22px; transition: all 300ms ease; }
+.temp-val  { font-family: "Ndot 57", "Inter"; font-size: 26px; }
+.temp-tile.hot { background: rgba(215, 25, 33, 0.25); border-color: @red; }
+.temp-tile.hot .temp-val { color: @red; }
+
+.tile {
+  background: @card;
+  border: 1px solid @line;
+  border-radius: 22px;
+  padding: 12px 4px;
+}
+.tile:hover { background: #2c2c2c; }
+.tile.on { background: @fg; border-color: @fg; }
+.tile.on label { color: #000; }
+
+.notif { padding: 10px 12px 10px 16px; border-radius: 20px; }
+.n-app { font-family: "Ndot 55", "Inter"; font-size: 10px; letter-spacing: 1.5px; color: @dim; }
+.n-sum { font-weight: 700; font-size: 13px; }
+.n-body { font-size: 12px; }
+.empty { padding: 14px; }
+.empty-dots { font-family: "Ndot 57"; font-size: 22px; color: #3a3a3a; letter-spacing: 6px; }
+
+scrollbar { background: transparent; border: none; }
+scrollbar slider { min-width: 3px; background: #3a3a3a; border-radius: 99px; border: none; }
+
+.power-btn {
+  background: @card;
+  border: 1px solid @line;
+  border-radius: 22px;
+  padding: 10px 2px;
+}
+.power-btn:hover { background: #2c2c2c; }
+.power-btn.confirm { background: @red; border-color: @red; }
+.power-btn.confirm label { color: @fg; }
+
+tooltip { background: #111; border: 1px solid @line; border-radius: 12px; }
+tooltip label { color: @fg; font-size: 11px; }

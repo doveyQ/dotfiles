@@ -1,0 +1,40 @@
+// Desktop widgets (Nothing-style cards + giant dot-matrix clock)
+// Rendered as a non-exclusive Waybar on the "bottom" layer — sits under windows.
+{
+  "name": "desktop",
+  "layer": "bottom",
+  "position": "top",
+  "output": ["DP-2"],
+  "exclusive": false,
+  "height": 340,
+  "passthrough": false,
+  "margin-top": 10,
+  "margin-left": 24,
+  "margin-right": 40,
+  "modules-left":  ["group/weather"],
+  "modules-right": ["group/clockstack"],
+
+  "group/weather": {
+    "orientation": "vertical",
+    "modules": ["custom/w-cond", "group/weather-row"]
+  },
+  "group/weather-row": {
+    "orientation": "horizontal",
+    "modules": ["custom/w-temp", "custom/w-hilo"]
+  },
+  "custom/w-cond": { "exec": "~/.config/waybar/scripts/weather.py cond", "return-type": "json", "interval": 900 },
+  "custom/w-temp": { "exec": "~/.config/waybar/scripts/weather.py temp", "return-type": "json", "interval": 900 },
+  "custom/w-hilo": { "exec": "~/.config/waybar/scripts/weather.py hilo", "return-type": "json", "interval": 900 },
+
+  "group/clockstack": {
+    "orientation": "vertical",
+    "modules": ["clock#date", "clock#big", "custom/sys"]
+  },
+  "clock#date": { "format": "{:%a, %d %b}", "tooltip": false },
+  "clock#big":  { "format": "{:%H:%M}", "interval": 5, "tooltip": false },
+  "custom/sys": {
+    "exec": "~/.config/waybar/scripts/dotbar.sh both",
+    "return-type": "json",
+    "interval": 3
+  }
+}

@@ -1,0 +1,7 @@
+/* Nothing settings hub — inherits the launcher look, two-column grid of pills */
+@import "nothing.rasi"
+window   { width: 640px; }
+listview { columns: 2; lines: 7; spacing: 8px; fixed-height: true; }
+element  { padding: 14px 18px; border-radius: 999px; background-color: #1e1e1ecc; }
+element selected.normal { background-color: #ffffff; text-color: #000000; }
+entry    { placeholder: "SETTINGS"; }

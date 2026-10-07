@@ -1,0 +1,52 @@
+/* Desktop widgets — dark glass cards on the wallpaper */
+* {
+  font-family: "Inter", "Symbols Nerd Font", sans-serif;
+  border: none; border-radius: 0; min-height: 0; box-shadow: none;
+}
+window#waybar.desktop, window#waybar { background: transparent; }
+
+/* weather cards */
+#custom-w-cond, #custom-w-temp, #custom-w-hilo {
+  background: rgba(30, 30, 30, 0.80);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+#custom-w-cond {
+  border-radius: 999px;
+  min-height: 74px;
+  padding: 0 34px 0 22px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+#custom-w-temp, #custom-w-hilo {
+  border-radius: 999px;      /* circles */
+  min-width: 82px;
+  min-height: 82px;
+  margin-right: 8px;
+}
+#custom-w-temp { font-size: 24px; font-weight: 300; }
+#custom-w-hilo { font-size: 12px; }
+
+/* clock stack (right) */
+#clockstack { margin-top: 10px; }
+#clock.date {
+  font-size: 15px;
+  font-weight: 500;
+  color: #2a2a2a;
+  padding-left: 6px;
+}
+#clock.big {
+  font-family: "Ndot 57";
+  font-size: 104px;
+  color: #141414;
+  letter-spacing: 4px;
+}
+#custom-sys {
+  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-size: 12px;
+  color: #ffffff;
+  background: rgba(30, 30, 30, 0.80);
+  border-radius: 20px;
+  padding: 12px 18px;
+  margin-top: 12px;
+}

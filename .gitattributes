@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.otf binary
+*.ttf binary
+*.jsonc linguist-language=JSON-with-Comments
+*.rasi  linguist-language=CSS

@@ -1,0 +1,51 @@
+# ── compositor & session ─────────────────────────
+hyprland
+hyprpaper
+hyprlock
+hypridle
+hyprpolkitagent
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+qt5-wayland
+qt6-wayland
+# ── shell surfaces ─────────────────────────
+waybar
+swaync
+rofi
+nwg-dock-hyprland
+python
+python-gobject
+gtk3
+gtk-layer-shell
+# ── apps & settings tools ─────────────────────────
+kitty
+dolphin
+nano
+pavucontrol
+blueman
+nwg-displays
+nwg-look
+network-manager-applet
+# ── system services / CLI used by the widgets ─────────────────────────
+networkmanager
+bluez
+bluez-utils
+pipewire-pulse
+wireplumber
+playerctl
+lm_sensors
+upower
+libnotify
+wl-clipboard
+cliphist
+grim
+slurp
+wf-recorder
+imagemagick
+git
+curl
+# ── fonts & icons ─────────────────────────
+ttf-jetbrains-mono-nerd
+ttf-nerd-fonts-symbols
+inter-font
+papirus-icon-theme

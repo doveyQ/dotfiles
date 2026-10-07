@@ -1,0 +1,62 @@
+/* Nothing OS power overlay — full-screen dim, five dot-matrix tiles */
+configuration {
+  show-icons: false;
+  hover-select: true;
+  me-select-entry: "";
+  me-accept-entry: "MousePrimary";
+}
+* {
+  bg: #000000c7; card: #141414f0; line: #ffffff14;
+  fg: #ffffff; dim: #8a8a8a; red: #d71921;
+  background-color: transparent; text-color: @fg;
+  font: "Inter 11";
+}
+window {
+  fullscreen: true;
+  background-color: @bg;
+  padding: 0;
+}
+mainbox {
+  children: [ dummy-top, textbox-title, listview, textbox-hint, dummy-bottom ];
+  spacing: 28px;
+}
+dummy-top, dummy-bottom { expand: true; }
+textbox-title {
+  content: "<span color='#d71921'>●</span>  SYSTEM";
+  markup: true;
+  font: "Ndot 57 20";
+  horizontal-align: 0.5;
+  expand: false;
+  text-color: @fg;
+}
+listview {
+  columns: 5; lines: 1; fixed-columns: true; fixed-height: true;
+  spacing: 18px;
+  expand: false;
+  layout: vertical;
+  margin: 0 28%;
+  scrollbar: false;
+  cycle: true;
+}
+element {
+  orientation: vertical;
+  padding: 26px 0 22px 0;
+  border: 1px; border-color: @line; border-radius: 28px;
+  background-color: @card;
+  cursor: pointer;
+}
+element-text {
+  horizontal-align: 0.5; vertical-align: 0.5;
+  text-color: inherit;
+  cursor: inherit;
+}
+element selected.normal { background-color: @fg; text-color: #000000; border-color: @fg; }
+element selected.urgent { background-color: @red; text-color: @fg; border-color: @red; }
+element normal.urgent   { text-color: @fg; }
+textbox-hint {
+  content: "P  POWER OFF   ·   R  REBOOT   ·   S  SLEEP   ·   L  LOCK   ·   E  LOG OUT   ·   ESC  CANCEL";
+  font: "Ndot 55 10";
+  text-color: @dim;
+  horizontal-align: 0.5;
+  expand: false;
+}

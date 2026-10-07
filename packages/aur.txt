@@ -1,0 +1,5 @@
+# AUR packages (installed with yay). Nothing here is required — the Nothing
+# dot-matrix fonts are fetched straight from GitHub by install.sh.
+# Uncomment to add extras:
+# wlogout
+# hyprshot
