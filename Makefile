@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 SHELL := /usr/bin/env bash
 
-.PHONY: help install links dry-run check reload update
+.PHONY: help install links dry-run check selftest reload update
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[1m%-10s\033[0m %s\n", $$1, $$2}'
@@ -18,6 +18,9 @@ dry-run: ## Show everything install would do, change nothing
 
 check: ## Lint shell/python/json and verify hyprland.lua
 	./scripts/check.sh
+
+selftest: ## Click every control in the Settings app (needs a running Hyprland; changes nothing)
+	NOTHING_SETTINGS_SELFTEST=1 ./settings/nothing-settings.py
 
 reload: ## Reload the running desktop (Hyprland, island, bars, wallpaper)
 	./hypr/scripts/nothing-reload.sh

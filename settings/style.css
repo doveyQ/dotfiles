@@ -1,0 +1,174 @@
+/* nothing-settings — Nothing OS monochrome · dot-matrix · one red */
+@define-color bg     #000000;
+@define-color side   #0b0b0b;
+@define-color card   #141414;
+@define-color card2  #1e1e1e;
+@define-color line   rgba(255, 255, 255, 0.07);
+@define-color fg     #ffffff;
+@define-color dim    #8a8a8a;
+@define-color red    #d71921;
+
+* {
+  font-family: "Inter", "Symbols Nerd Font", sans-serif;
+  font-size: 13px;
+  text-shadow: none;
+  -gtk-icon-shadow: none;
+}
+
+window.nothing-settings, window.nothing-settings > overlay { background: @bg; color: @fg; }
+
+/* ── sidebar ── */
+.sidebar {
+  background: @side;
+  border-right: 1px solid @line;
+  min-width: 230px;
+  padding: 22px 12px;
+}
+.brand {
+  font-family: "Ndot 57", "Inter";
+  font-size: 18px;
+  letter-spacing: 3px;
+  padding: 0 12px 20px 12px;
+  color: @fg;
+}
+list.nav, list.nav row { background: transparent; }
+list.nav row {
+  border-radius: 999px;
+  padding: 9px 14px;
+  margin: 1px 0;
+  transition: background 160ms ease;
+}
+list.nav row:hover { background: @card2; }
+list.nav row:selected { background: @fg; }
+list.nav row:selected label { color: #000000; }
+.nav-icon { font-family: "Symbols Nerd Font"; font-size: 15px; min-width: 20px; color: @dim; }
+.nav-label { font-size: 13px; font-weight: 500; }
+
+/* ── page ── */
+.page { padding: 30px 40px 40px 40px; }
+.page-title { font-family: "Ndot 57", "Inter"; font-size: 30px; letter-spacing: 3px; color: @fg; }
+.page-sub { color: @dim; font-size: 13px; }
+.section {
+  font-family: "Ndot 55", "Inter";
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: @dim;
+  margin-top: 14px;
+}
+
+list.card {
+  background: @card;
+  border: 1px solid @line;
+  border-radius: 22px;
+  padding: 4px 0;
+}
+list.card row { background: transparent; border-bottom: 1px solid @line; }
+list.card row:last-child { border-bottom: none; }
+list.card row:hover { background: transparent; }
+.row { padding: 12px 20px; min-height: 30px; }
+.row-title { font-size: 13.5px; font-weight: 600; color: @fg; }
+.row-sub { font-size: 12px; color: @dim; }
+.value { color: @dim; }
+.dots { font-family: "JetBrainsMono Nerd Font", monospace; font-size: 10px; letter-spacing: 1px; color: @fg; }
+.kbd {
+  font-family: "Ndot 55", "JetBrainsMono Nerd Font", monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: @fg;
+  background: @card2;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+/* ── controls ── */
+button.pill {
+  background: @card2;
+  color: @fg;
+  border: 1px solid @line;
+  border-radius: 999px;
+  padding: 6px 16px;
+  box-shadow: none;
+  font-weight: 600;
+  transition: all 140ms ease;
+}
+button.pill:hover { background: #2c2c2c; }
+button.pill.accent { background: @fg; color: #000; border-color: @fg; }
+button.pill.accent:hover { background: #dcdcdc; }
+button.pill.accent label { color: #000; }
+button.pill.danger:hover { background: @red; border-color: @red; }
+
+switch {
+  background: #2a2a2a;
+  border: none;
+  border-radius: 999px;
+  min-width: 46px;
+  min-height: 24px;
+  transition: background 180ms ease;
+}
+switch:checked { background: @red; }
+switch slider {
+  background: @fg;
+  border: none;
+  border-radius: 999px;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 2px;
+  box-shadow: none;
+}
+
+scale trough { background: #2a2a2a; border: none; border-radius: 999px; min-height: 6px; }
+scale highlight { background: @fg; border-radius: 999px; border: none; }
+scale slider {
+  background: @fg;
+  border: 3px solid @bg;
+  border-radius: 999px;
+  min-width: 16px;
+  min-height: 16px;
+  margin: -6px;
+  box-shadow: none;
+}
+scale slider:hover { background: @red; }
+scale value { color: @dim; font-family: "Ndot 55", "Inter"; font-size: 12px; min-width: 40px; }
+
+combobox button, entry, spinbutton {
+  background: @card2;
+  color: @fg;
+  border: 1px solid @line;
+  border-radius: 12px;
+  box-shadow: none;
+  min-height: 30px;
+}
+spinbutton { border-radius: 12px; }
+spinbutton entry { background: transparent; border: none; min-width: 26px; font-family: "Ndot 57", "Inter"; font-size: 15px; }
+spinbutton button { background: transparent; border: none; color: @dim; }
+entry:focus, combobox button:focus { border-color: @dim; }
+menu, .menu, popover { background: #111; color: @fg; border: 1px solid @line; }
+menuitem:hover { background: @red; }
+
+flowbox.walls { padding: 14px; }
+button.wall {
+  padding: 3px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 14px;
+}
+button.wall image { border-radius: 10px; }
+button.wall:hover { border-color: @dim; }
+button.wall.current { border-color: @red; }
+
+scrollbar { background: transparent; border: none; }
+scrollbar slider { background: #333; border-radius: 99px; min-width: 4px; border: none; }
+
+/* ── toast ── */
+.toast {
+  background: @fg;
+  color: #000;
+  border-radius: 999px;
+  padding: 10px 22px;
+  margin-bottom: 26px;
+  font-weight: 600;
+}
+.toast.error { background: @red; color: @fg; }
+
+dialog, messagedialog { background: #0e0e0e; color: @fg; }
+dialog .dialog-action-area button, messagedialog button { border-radius: 999px; }

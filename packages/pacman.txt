@@ -24,7 +24,6 @@ dolphin
 nano
 pavucontrol
 blueman
-nwg-displays
 nwg-look
 network-manager-applet
 # ── system services / CLI used by the widgets ─────────────────────────
@@ -32,6 +31,7 @@ networkmanager
 bluez
 bluez-utils
 pipewire-pulse
+libpulse
 wireplumber
 playerctl
 lm_sensors

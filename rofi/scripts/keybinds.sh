@@ -3,7 +3,7 @@
 rofi -dmenu -i -theme ~/.config/rofi/settings.rasi -theme-str 'listview { columns: 1; lines: 14; } window { width: 560px; } entry { placeholder: "KEYBINDINGS"; }' -no-custom >/dev/null <<'KEYS'
 SUPER Return          Terminal (kitty)
 SUPER D  ·  SUPER R   App launcher
-SUPER I               Settings hub
+SUPER I               Settings
 SUPER N               Control center
 SUPER A               Dynamic island (pin open)
 SUPER SHIFT X         Power menu  (p r s l e)

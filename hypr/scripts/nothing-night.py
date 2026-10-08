@@ -51,7 +51,9 @@ def save(s):
 
 def notify_shell():
     """Let the island / control center redraw (no-op if nothing-shell isn't running)."""
-    subprocess.run(["nothing-shell", "night-changed"], capture_output=True, timeout=2)
+    shell = os.path.expanduser("~/.local/bin/nothing-shell")   # absolute: PATH may lack ~/.local/bin
+    if os.path.exists(shell):
+        subprocess.run([shell, "night-changed"], capture_output=True, timeout=2)
 
 
 # ── hyprsunset ─────────────────────────────────────────

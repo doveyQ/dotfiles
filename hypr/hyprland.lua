@@ -46,20 +46,46 @@ if f then
     machine = dofile(localfile) or {}   -- no pcall: mistakes show up in the error bar
 end
 
+-------------------
+---- SETTINGS -----
+-------------------
+-- Choices made in the Settings app (Super+I) or `nothing-settings set …` are generated into
+-- ~/.config/nothing/settings.lua (outside the repo). They win over the machine file.
+local ui = {}
+local uifile = os.getenv("HOME") .. "/.config/nothing/settings.lua"
+local uf = io.open(uifile)
+if uf then
+    uf:close()
+    ui = dofile(uifile) or {}
+end
+if ui.main then machine.main = ui.main end
+
 ------------------
 ---- MONITORS ----
 ------------------
-for _, m in ipairs(machine.monitors or {}) do hl.monitor(m) end
+-- per output: Settings app first, then the machine file, then "preferred / auto"
+local seen = {}
+for _, m in ipairs(ui.monitors or {}) do hl.monitor(m); seen[m.output] = true end
+for _, m in ipairs(machine.monitors or {}) do
+    if not seen[m.output] then hl.monitor(m) end
+end
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
+
+-- Login managers don't read ~/.bashrc, so the session PATH lacks ~/.local/bin (where
+-- install.sh puts nothing-*). Add it before anything is launched.
+local path = os.getenv("PATH") or "/usr/local/bin:/usr/bin:/bin"
+if not (":" .. path .. ":"):find(":" .. bin .. ":", 1, true) then   -- reloads re-run this file
+    hl.env("PATH", bin .. ":" .. path)
+end
 
 -------------------
 ---- AUTOSTART ----
 -------------------
 hl.on("hyprland.start", function()
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
+    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE PATH")
     hl.exec_cmd("systemctl --user start hyprpolkitagent")
-    hl.exec_cmd("hyprpaper")
-    hl.exec_cmd("hypridle")                                   -- the ONLY idle/lock manager → hyprlock
+    hl.exec_cmd(scripts .. "/wallpaper.sh")                    -- hyprpaper (Settings → Appearance)
+    hl.exec_cmd(scripts .. "/idle.sh")                        -- hypridle: the ONLY idle/lock manager → hyprlock
     hl.exec_cmd("hyprsunset -i")                              -- night mode backend (nothing-night drives it)
     hl.exec_cmd("swaync")                                     -- notification popups
     hl.exec_cmd(bin .. "/nothing-shell")                      -- dynamic island + control center
@@ -323,9 +349,17 @@ hl.window_rule({
 
 hl.window_rule({
     name   = "float-settings-tools",
-    match  = { class = "^(org.pulseaudio.pavucontrol|pavucontrol|blueman-manager|nm-connection-editor|nwg-displays|nwg-look|nothing-float|com.saivert.pwvucontrol)$" },
+    match  = { class = "^(org.pulseaudio.pavucontrol|pavucontrol|blueman-manager|nm-connection-editor|nwg-look|nothing-float|com.saivert.pwvucontrol)$" },
     float  = true,
     size   = "860 600",
+    center = true,
+})
+
+hl.window_rule({
+    name   = "nothing-settings",
+    match  = { class = "^(dev.nothing.Settings|nothing-settings)$" },
+    float  = true,
+    size   = "1040 720",
     center = true,
 })
 
@@ -348,3 +382,6 @@ hl.layer_rule({ name = "island-static", match = { namespace = "^nothing-island$"
 --------------------------------
 -- hyprland.local.lua's setup() runs last, so it can override anything above (see MACHINE)
 if machine.setup then machine.setup() end
+
+-- Settings app choices (keyboard, mouse, touchpad, gaps, blur …) are applied last
+if ui.config then hl.config(ui.config) end

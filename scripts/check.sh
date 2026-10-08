@@ -58,7 +58,7 @@ if command -v Hyprland >/dev/null; then
 else skip "hyprland.lua" Hyprland; fi
 
 echo "repo"
-for f in hypr/scripts/*.sh rofi/scripts/*.sh waybar/scripts/* nothing-shell/nothing-shell.py install.sh scripts/*.sh; do
+for f in hypr/scripts/*.sh hypr/scripts/*.py rofi/scripts/*.sh waybar/scripts/*.sh waybar/scripts/*.py nothing-shell/nothing-shell.py settings/nothing-settings.py system/*.sh install.sh scripts/*.sh; do
   [[ -x "$f" ]] || bad "not executable: $f"
 done
 ok "executable bits"

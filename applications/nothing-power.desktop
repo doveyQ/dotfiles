@@ -2,7 +2,7 @@
 Type=Application
 Name=Power Menu
 Comment=Shut down, reboot, sleep, lock or log out
-Exec=nothing-power
+Exec=@BIN@/nothing-power
 Icon=system-shutdown
 Terminal=false
 Categories=System;

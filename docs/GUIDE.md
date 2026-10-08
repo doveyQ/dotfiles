@@ -41,7 +41,8 @@ dot-matrix numerals (the Ndot fonts) and a single red accent that always means
 | **nothing-shell** | dynamic island + control center (Python/GTK3, layer-shell) | `nothing-shell/` |
 | **Waybar** (×2) | logo + status pill · desktop widgets | `waybar/` |
 | **SwayNC** | notification *popups* and Do-Not-Disturb | `swaync/` |
-| **Rofi** | app launcher, settings hub, power menu, clipboard, cheat-sheet | `rofi/` |
+| **Settings** | settings app + `nothing-settings` CLI (Python/GTK3) | `settings/` → `~/.config/nothing/` |
+| **Rofi** | app launcher, power menu, clipboard, cheat-sheet | `rofi/` |
 | **hyprlock** | the one and only lock screen | `hypr/hyprlock.conf` |
 | **hypridle** | idle timeline, answers every lock request | `hypr/hypridle.conf` |
 | **hyprpaper** | wallpaper | `hypr/hyprpaper.conf` |
@@ -90,27 +91,28 @@ Then **log out → choose “Hyprland” on the login screen** (not “Hyprland 
 Because configs are **symlinks**, editing `~/.config/hypr/hyprland.lua` *is* editing the repo.
 `git status` in `~/dotfiles` shows every change you made.
 
-### Boot straight into the lock screen (optional)
+### Login screen: boot straight into the Nothing lock screen
 
-By default the login screen at boot is your display manager's (on this machine KDE's
-*Plasma Login*), which can't look like hyprlock. To make the **Nothing lock screen the
-first thing you see**:
+A normal display manager (SDDM on EndeavourOS, Plasma Login on KDE) draws its own login
+screen before Hyprland exists, so it can never look like hyprlock. The installer therefore
+asks — and by default switches to **greetd**: it logs you in automatically and starts
+`start-hyprland -- --locked-cmd hyprlock`, so Hyprland comes up **already locked** and the
+first thing you see is the Nothing lock screen. No desktop frame is shown before hyprlock,
+and if hyprlock failed the session would stay locked (§9).
 
-```bash
-./install.sh --boot-lock        # installs greetd + tuigreet, takes effect at next boot
-./install.sh --restore-login    # back to the previous login screen
-```
+| | |
+|---|---|
+| switch it on / off | **Settings → Login screen** (asks for your password) |
+| from a terminal | `nothing-settings set login.boot_lock on\|off` · `./install.sh --restore-login` |
+| skip it during install | `./install.sh --no-boot-lock` |
+| status | `~/dotfiles/system/nothing-login.sh status` |
 
-How it works: greetd logs you in automatically and starts
-`start-hyprland -- --locked-cmd hyprlock`, so Hyprland comes up **already locked** — no
-desktop frame is ever shown before hyprlock, and if hyprlock failed the session would stay
-locked (see §9). After you log out you get a minimal text greeter (tuigreet; `F3` picks
-another session, e.g. Plasma).
+It takes effect at the next boot; the running session is never touched. After you log out
+you get a minimal text login (tuigreet; `F3` picks another session such as Plasma).
 
-Trade-off: the password is checked by hyprlock *after* login, so PAM modules that unlock
-things at login (KWallet / GNOME Keyring) don't run — apps using them will ask for the
-wallet password once. Full-disk encryption is the right protection for data at rest
-either way.
+Trade-off: your password is checked by hyprlock *after* login, so PAM modules that unlock
+things at login (KWallet / GNOME Keyring) don't run — apps using them ask for the wallet
+password once. Full-disk encryption is the right protection for data at rest either way.
 
 ### Your machine (monitors, laptop, devices)
 
@@ -206,12 +208,51 @@ Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
 Arrow keys + `Enter` and the mouse work too.
 
-### Settings hub — `Super` `I` (or search “Settings” in the launcher, or right-click the tux)
+### Settings — `Super` `I` (also “Settings” in the launcher, or right-click the tux)
 
-Wi-Fi & Network (nmtui) · Bluetooth (blueman) · Sound (pavucontrol) · Displays (nwg-displays) ·
-Appearance (nwg-look: GTK theme, icons, cursor) · Keyboard · Wallpaper picker ·
-Do Not Disturb · Idle & Sleep · Lock Screen · Hyprland Config · Keybindings · Reload Desktop ·
-KDE System Settings. Each entry also works directly: `nothing-settings wifi`, `… audio`, etc.
+A real settings app in the Nothing style. Every page changes things **live**:
+
+| Page | What you can do |
+|---|---|
+| **Network** | Wi-Fi on/off, nearby networks with signal, connect (password prompt), disconnect, forget; wired status; connection editor / nmtui for VPN, static IP … |
+| **Bluetooth** | turn on the service if needed, power, scan, pair, connect, disconnect, remove; Blueman for extras |
+| **Sound** | output & input device, volume (up to 150 %), mute, test sound, mixer |
+| **Displays** | main screen, resolution & refresh rate, scale, position (left/right/above/below), VRR, on/off — with a 15-second *Keep / Revert* safety prompt |
+| **Appearance** | wallpaper gallery + your own images, window gaps, corner radius, border, inactive opacity, blur, red glow, animations; GTK theme/icons/cursor (nwg-look) |
+| **Night mode** | on/off, warmth, schedule with presets or exact times |
+| **Notifications** | Do Not Disturb, clear history, test notification |
+| **Keyboard & mouse** | layout + variant (all XKB layouts), key repeat, pointer speed, acceleration, natural scrolling; touchpad tap / scrolling / disable-while-typing on laptops |
+| **Power & lock** | lock / screens-off / sleep timers, warn & dim before locking, power mode (laptops), lock now |
+| **Login screen** | boot straight into the Nothing lock screen (see §2) |
+| **Shortcuts** | every keybinding |
+| **About** | system info, update the dotfiles, reload the desktop, edit the machine file, reset everything |
+
+Missing helper programs show an **Install** button (asks for your password).
+
+**Everything is also in the terminal** — same backend, same validation:
+
+```bash
+nothing-settings list                          # every key and its value (* = changed)
+nothing-settings get appearance.rounding
+nothing-settings set appearance.rounding 12
+nothing-settings set keyboard.layout de        # then: set keyboard.variant nodeadkeys
+nothing-settings set idle.lock 20              # minutes, 0 = never
+nothing-settings set idle.screen_off auto      # 30 s after locking (default)
+nothing-settings set night.schedule 21:30-06:45
+nothing-settings set display.DP-2.scale 1.25   # also .mode .position .vrr .enabled, display.main
+nothing-settings set display.brightness 60     # laptops (built-in screen)
+nothing-settings set sound.volume 35
+nothing-settings set login.boot_lock on
+nothing-settings reset appearance              # one key or a whole section
+nothing-settings wifi list | scan | connect SSID [PASSWORD] | disconnect | forget SSID
+nothing-settings bt   list | scan | pair MAC | connect MAC | disconnect MAC | remove MAC
+nothing-settings network                       # open the app on a page
+```
+
+Your choices live in **`~/.config/nothing/`** — `settings.json` plus generated
+`settings.lua` (read by `hyprland.lua`), `hypridle.conf` and `hyprpaper.conf`. That folder is
+outside the repo, so both machines keep their own settings and `git status` stays clean.
+Order of precedence: **Settings app › machine file (`hyprland.local.lua`) › repo defaults.**
 
 ### Night mode
 
@@ -222,7 +263,7 @@ island while it is on.
 |---|---|
 | keys | `Super` `Ctrl` `N` toggles |
 | control center | **NIGHT** tile |
-| settings hub | **Night Mode** → on/off · warmth · schedule |
+| Settings | **Night mode** page: on/off · warmth · schedule with exact times |
 | terminal | `nothing-night on\|off\|toggle`, `nothing-night temp 3500`, `nothing-night schedule 21:30 06:45`, `nothing-night schedule off`, `nothing-night status` |
 
 **Warmth presets:** 5500 K subtle · 4500 warm · **4000 default** · 3500 very warm · 2800 candle.
@@ -236,7 +277,8 @@ State is machine-local: `~/.local/state/nothing/night.json`.
 ### Locking & idle
 
 `Super` `L`, the power menu and the control center all call `loginctl lock-session`.
-hypridle answers that with hyprlock. The idle timeline:
+hypridle answers that with hyprlock. The default idle timeline (change it in
+**Settings → Power & lock**):
 
 | Time idle | What happens |
 |---|---|
@@ -273,7 +315,7 @@ dot when there is history; `Super` `Shift` `N` (or right-click the bell) toggles
 ### Startup
 
 Hyprland reads `hypr/hyprland.lua`; the `hyprland.start` hook launches, in order:
-polkit agent → hyprpaper → **hypridle** → hyprsunset → swaync → **nothing-shell** → waybar (bar) →
+PATH fix (`~/.local/bin`) → polkit agent → wallpaper (`scripts/wallpaper.sh`) → **hypridle** (`scripts/idle.sh`) → hyprsunset → swaync → **nothing-shell** → waybar (bar) →
 waybar (desktop widgets) → nwg-dock → clipboard watcher.
 
 ### nothing-shell
@@ -344,8 +386,9 @@ dot, `-RTMIN+9` the notification bell.
 |---|---|
 | `~/.cache/nothing-weather.json` | weather cache |
 | `~/.cache/nothing-shell/` | notification history, album-art cache |
+| `~/.config/nothing/` | **your settings** from the Settings app / `nothing-settings set` |
 | `~/.local/state/nothing/night.json` | night-mode state and schedule |
-| `/etc/greetd/config.toml` | only with `--boot-lock` (template: `system/greetd/config.toml`) |
+| `/etc/greetd/config.toml` | login screen → Nothing lock screen (template: `system/greetd/config.toml`) |
 | `/etc/systemd/logind.conf.d/10-nothing-laptop.conf` | laptops: power key → power menu |
 | `$XDG_RUNTIME_DIR/nothing-rotate/` | auto-rotation state (convertibles) |
 | `hypr/hyprland.local.lua`, `waybar/local.jsonc` | your machine files — inside the repo folder, git-ignored |
@@ -359,15 +402,16 @@ dot, `-RTMIN+9` the notification bell.
 | I want to change… | Edit |
 |---|---|
 | colours | `nothing-shell/style.css`, `waybar/style.css`, `waybar/desktop.css`, `rofi/*.rasi`, `swaync/style.css`, `kitty/kitty.conf`, `hypr/hyprlock.conf` (all share one palette) |
-| gaps, borders, rounding, blur, animations | `hypr/hyprland.lua` → LOOK AND FEEL |
+| gaps, borders, rounding, blur, animations | **Settings → Appearance** (defaults: `hypr/hyprland.lua` → LOOK AND FEEL) |
 | keybindings | `hypr/hyprland.lua` → KEYBINDINGS (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
 | autostart | `hypr/hyprland.lua` → `hl.on("hyprland.start", …)` |
-| idle / lock / suspend times | `hypr/hypridle.conf` |
+| idle / lock / suspend times | **Settings → Power & lock** (default: `hypr/hypridle.conf`) |
 | lock-screen look | `hypr/hyprlock.conf` |
-| wallpaper | Settings hub → Wallpaper (drop images into `hypr/wallpapers/`) |
+| wallpaper | **Settings → Appearance** (shared images: `hypr/wallpapers/`, yours: `~/.local/share/nothing/wallpapers/`) |
+| keyboard, mouse, touchpad, monitors | **Settings** (or `hyprland.local.lua` for things the app doesn't cover) |
 | weather location | `export NOTHING_WEATHER_LOCATION=Vienna` (e.g. via `hl.env(...)` in hyprland.lua) |
 | monitors, main screen for the island, touchpad, per-machine binds | `~/.config/hypr/hyprland.local.lua` (§2 *Your machine*) |
-| settings-hub entries | `rofi/scripts/settings.sh` — add a `label|key` line and a `case` branch |
+| a new setting | `settings/nothing-settings.py`: add the key to `SCHEMA` (CLI + generated config) and a row to its page |
 | island content | `nothing-shell/nothing-shell.py` → `Island._build_panel()` |
 
 **Apply changes:** Hyprland reloads `hyprland.lua` automatically on save; everything else:
@@ -417,6 +461,7 @@ it is strict and names unknown keys. API reference: `/usr/share/hypr/stubs/hl.me
 ```bash
 make help        # list tasks
 make check       # lint shell (shellcheck), python (ruff), JSON/JSONC, verify hyprland.lua
+make selftest    # click every control in the Settings app (backend stubbed — changes nothing)
 make reload      # restart island, bars, popups, wallpaper, idle daemon
 make update      # git pull --ff-only + relink
 ```
@@ -438,7 +483,9 @@ make update      # git pull --ff-only + relink
 for d in hypr waybar swaync rofi kitty nwg-dock-hyprland nothing-shell; do
   [ -L ~/.config/$d ] && rm ~/.config/$d
 done
-rm -f ~/.local/bin/nothing-{shell,settings,power,keybinds,reload}
+rm -f ~/.local/bin/nothing-{shell,settings,power,keybinds,reload,night}
+rm -rf ~/.config/nothing                       # your Settings choices
+~/dotfiles/system/nothing-login.sh status && sudo ~/dotfiles/system/nothing-login.sh disable
 rm -f ~/.local/share/applications/nothing-{settings,power}.desktop
 
 # restore your previous configs
@@ -461,8 +508,10 @@ Packages are left installed; remove them with `sudo pacman -Rns …` if you want
 | Bluetooth toggle does nothing, `bluetoothctl` hangs | `sudo systemctl enable --now bluetooth` |
 | Wrong keys / dead keys on the login screen or TTY | `sudo localectl set-x11-keymap at pc105 nodeadkeys` · `sudo localectl set-keymap --no-convert de-latin1-nodeadkeys` |
 | **“Oopsie daisy … lockscreen app died”** | `Ctrl+Alt+F3`, log in, `hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()'`, back with `Ctrl+Alt+F1/F2`. Never kill hyprlock to “unlock”. |
-| Login screen at boot looks like KDE | that's the display manager — `./install.sh --boot-lock` (see §2) |
-| Night mode does nothing | `pacman -Q hyprsunset`; `pgrep hyprsunset`; `nothing-night status` |
+| Standard (SDDM / KDE) login screen at boot | Settings → Login screen, or `nothing-settings set login.boot_lock on`; reboot (see §2) |
+| Night mode does nothing | Settings → Night mode shows *Install* if hyprsunset is missing; `nothing-night status` |
+| A button / menu entry does nothing | `make check` (exec bits), `echo $PATH` inside Hyprland must contain `~/.local/bin`; run the command from the menu in a terminal to see its error |
+| Settings change doesn't stick after reboot | `cat ~/.config/nothing/settings.lua`; `hyprctl configerrors` |
 | Screens stay black after idle | press a key / move the mouse; or `hyprctl dispatch 'hl.dsp.dpms({ action = "on" })'` |
 | Weather shows `--` | offline or wttr.in down; `~/.config/waybar/scripts/weather.py bar` to test |
 | No album art | the player doesn't publish `mpris:artUrl` (common for browser tabs) — a dot placeholder is shown |
@@ -487,5 +536,12 @@ user services `journalctl --user -b`.
 - **GTK3 has no monitor connector names** — nothing-shell maps `NOTHING_OUTPUT` to a GDK monitor
   by matching positions from `hyprctl monitors`.
 - **Battery** — desktops show “AC POWER” on the lock screen; laptops get a dot bar.
+- **Session PATH** — login managers don't read `~/.bashrc`, so `~/.local/bin` is missing from
+  Hyprland's PATH unless `hyprland.lua` adds it (it does). Internal calls use absolute paths
+  anyway, and launcher entries are written with absolute `Exec=` paths.
+- **nwg-displays** writes `monitors.conf` in the old syntax, which Hyprland 0.56's Lua config
+  never reads — so displays are handled by the Settings app instead.
+- **`hyprctl monitors` can't tell “VRR fullscreen-only” from “off”** (it reports whether VRR is
+  active *now*), so the Displays page keeps the configured value unless you pick one.
 - **KDE Plasma** stays installed and selectable on the login screen; its own lock screen
   (`kscreenlocker`) only ever runs inside a Plasma session.

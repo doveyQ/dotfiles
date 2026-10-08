@@ -33,6 +33,7 @@ HOME = os.path.expanduser("~")
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
 SOCK = os.path.join(RUNTIME, "nothing-shell.sock")
 CACHE = os.path.join(HOME, ".cache", "nothing-shell")
+BIN = os.path.join(HOME, ".local", "bin")   # absolute: the session PATH may not include ~/.local/bin
 NOTIF_FILE = os.path.join(CACHE, "notifications.json")
 WEATHER_CACHE = os.path.join(HOME, ".cache", "nothing-weather.json")
 WEATHER_SCRIPT = os.path.join(HOME, ".config", "waybar", "scripts", "weather.py")
@@ -638,7 +639,7 @@ class Island(LayerWindow):
         self.net_lbl = label("", ellipsize=True)
         self.net_lbl.set_max_width_chars(14)
         self.net_btn.add(self.net_lbl)
-        self.net_btn.connect("clicked", lambda *_: (self.collapse(force=True), spawn(["nothing-settings", "wifi"])))
+        self.net_btn.connect("clicked", lambda *_: (self.collapse(force=True), spawn([os.path.join(BIN, "nothing-settings"), "network"])))
         self.wifi_t = icon_button("󰤨", "round toggle", "Wi-Fi", lambda: self.shell.toggle("wifi", self))
         self.bt_t = icon_button("󰂯", "round toggle", "Bluetooth", lambda: self.shell.toggle("bt", self))
         for w in (self.mute_btn,):
@@ -1409,11 +1410,11 @@ class Shell:
         return True
 
     def _night_start(self):
-        in_thread(lambda: run(["nothing-night", "apply"], 10), lambda _r: self.night_changed())
+        in_thread(lambda: run([os.path.join(BIN, "nothing-night"), "apply"], 10), lambda _r: self.night_changed())
         return False
 
     def _night_tick(self):
-        in_thread(lambda: run(["nothing-night", "tick"], 10))
+        in_thread(lambda: run([os.path.join(BIN, "nothing-night"), "tick"], 10))
         return True
 
     def night_changed(self):
@@ -1441,7 +1442,7 @@ class Shell:
                 run(["swaync-client", "-d"])
                 spawn("pkill -RTMIN+9 waybar")
             elif key == "night":
-                run(["nothing-night", "toggle"], 5)
+                run([os.path.join(BIN, "nothing-night"), "toggle"], 5)
             elif key == "mic":
                 run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
 

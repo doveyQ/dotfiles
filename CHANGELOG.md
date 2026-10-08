@@ -7,6 +7,30 @@ project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Settings app** (`Super+I`, launcher entry *Settings*): Network, Bluetooth, Sound, Displays,
+  Appearance, Night mode, Notifications, Keyboard & mouse, Power & lock, Login screen,
+  Shortcuts, About — all live, with *Install* buttons for missing helpers and a 15 s
+  keep/revert prompt for display changes. Replaces the Rofi settings hub.
+- **`nothing-settings` CLI** with the same backend: `list`, `get`, `set`, `reset`, `wifi …`, `bt …`.
+- Settings are stored per machine in `~/.config/nothing/` (generated `settings.lua`,
+  `hypridle.conf`, `hyprpaper.conf`) — outside the repo; they win over the machine file.
+- `make selftest`: opens every Settings page and fires every control with a stubbed backend.
+
+### Changed
+- The installer now sets up the **Nothing login** (greetd → Hyprland started locked by
+  hyprlock) by default after asking; `--no-boot-lock` keeps the distribution's login screen.
+  Shared helper `system/nothing-login.sh` (also used by Settings → Login screen).
+
+### Fixed
+- Buttons and menu entries that did nothing: the Hyprland session's PATH lacks `~/.local/bin`
+  (login managers don't read `~/.bashrc`) — night-mode tile, Night Mode menu, launcher
+  *Settings* entry, island network chip. PATH is now set in `hyprland.lua`, every internal call
+  is absolute and launcher entries get absolute `Exec=` paths.
+- Display settings now persist (nwg-displays writes old-syntax `monitors.conf`, ignored by the
+  Lua config); VRR "fullscreen only" is no longer reset by saving.
+- `make check` now verifies executable bits of every script, Python included.
+
+### Added
 - **Night mode** (`nothing-night`, hyprsunset): smooth fade, warmth presets, schedule with
   presets or custom times; manual toggles override until the next scheduled switch.
   In the settings hub, as a control-center tile, `Super+Ctrl+N`, and a moon in the island.

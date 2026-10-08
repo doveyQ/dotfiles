@@ -46,12 +46,13 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
   with per‑item dismiss and clear‑all, and power actions with two‑step confirm for
   destructive ones.
 - **Power overlay** — full‑screen dim with five tiles and single‑key accelerators.
-- **Settings hub** — Wi‑Fi, Bluetooth, Sound, Displays, Appearance, Keyboard, Wallpaper,
-  DND, idle/lock, configs, keybinding cheat‑sheet. Also in the app launcher as *Settings*.
+- **Settings app** (`Super` `I`) — Network, Bluetooth, Sound, Displays, Appearance, Night mode,
+  Notifications, Keyboard & mouse, Power & lock, Login screen, Shortcuts, About. Every option is
+  also a terminal command: `nothing-settings set appearance.rounding 12` (see the Guide).
 - **Night mode** — warm screen via hyprsunset with a smooth fade, warmth presets and a
-  schedule (presets or custom times). Settings hub, control-center tile or `Super` `Ctrl` `N`.
-- **Boot lock** (optional) — boot straight into the Nothing lock screen instead of the KDE
-  login screen: `./install.sh --boot-lock`.
+  schedule (presets or exact times). Settings, control-center tile or `Super` `Ctrl` `N`.
+- **Nothing login** — boots straight into the Nothing lock screen instead of the standard
+  login screen (greetd; on by default, switch in Settings → Login screen).
 - **One lock screen** — hyprlock only: giant Ndot clock, blur, battery/AC readout,
   now‑playing, keyboard‑layout chip, red‑accented password pill.
 - **Austrian German, no dead keys** everywhere: Hyprland, hyprlock, login screen, TTY.
@@ -89,8 +90,8 @@ The installer is idempotent — `make update` pulls and relinks.
 | `--copy` | copy files instead of symlinking |
 | `--dry-run` | print every action without changing anything |
 | `-y` | don't ask before installing packages |
-| `--boot-lock` | boot into hyprlock (greetd autologin) instead of the KDE login screen |
-| `--restore-login` | undo `--boot-lock` |
+| `--no-boot-lock` | keep your distribution's login screen (default: ask, then use the Nothing lock screen) |
+| `--restore-login` | go back to the previous login screen |
 
 What it does:
 
@@ -118,7 +119,8 @@ dotfiles/
 ├── docs/GUIDE.md        the full manual
 ├── scripts/check.sh     linters + config validation (make check, CI)
 ├── packages/            pacman.txt · aur.txt · laptop.txt (added when a battery is present)
-├── system/greetd/       boot-lock login config (opt-in, --boot-lock)
+├── settings/            Settings app + nothing-settings CLI
+├── system/              login-screen helper + greetd template, laptop logind drop-in
 ├── system/logind/       laptops: power key → power menu
 ├── hypr/                → ~/.config/hypr
 │   ├── hyprland.lua     main config (Hyprland ≥ 0.56 uses Lua, not hyprland.conf)
@@ -131,7 +133,7 @@ dotfiles/
 ├── nothing-shell/       → ~/.config/nothing-shell   (island + control center, Python/GTK3)
 ├── waybar/              → ~/.config/waybar   (logo + status pill, desktop widgets, scripts/)
 ├── swaync/              → ~/.config/swaync   (notification popups)
-├── rofi/                → ~/.config/rofi     (launcher, settings hub, power menu, scripts/)
+├── rofi/                → ~/.config/rofi     (launcher, power menu, cheat-sheet, scripts/)
 ├── kitty/               → ~/.config/kitty
 ├── nwg-dock-hyprland/   → ~/.config/nwg-dock-hyprland
 ├── applications/        → ~/.local/share/applications  (Settings, Power Menu)
@@ -145,7 +147,7 @@ dotfiles/
 |---|---|
 | `Super` `Return` | Terminal (kitty) |
 | `Super` `D` / `Super` `R` | App launcher |
-| `Super` `I` | Settings hub |
+| `Super` `I` | Settings |
 | `Super` `N` | Control center |
 | `Super` `A` | Pin the dynamic island open |
 | `Super` `Shift` `X` | Power menu — `P` power off · `R` reboot · `S` sleep · `L` lock · `E` log out · `Esc` |
