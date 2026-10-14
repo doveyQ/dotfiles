@@ -299,8 +299,8 @@ dot when there is history; `Super` `Shift` `N` (or right-click the bell) toggles
 
 | Keys | Action |
 |---|---|
-| `Print` | select region → clipboard |
-| `Shift` `Print` | whole screen → `~/Pictures/` |
+| `Super` `Shift` `S` or `Print` | select a region → clipboard (`Esc` cancels) |
+| `Shift` `Print` | the screen you're on → `~/Pictures/` (and the clipboard) |
 | `Super` `Shift` `Print` | start/stop recording (select region; `Esc` = whole main screen) → `~/Videos/` |
 | `Super` `V` | clipboard history |
 
@@ -403,7 +403,8 @@ dot, `-RTMIN+9` the notification bell.
 |---|---|
 | colours | `nothing-shell/style.css`, `waybar/style.css`, `waybar/desktop.css`, `rofi/*.rasi`, `swaync/style.css`, `kitty/kitty.conf`, `hypr/hyprlock.conf` (all share one palette) |
 | gaps, borders, rounding, blur, animations | **Settings → Appearance** (defaults: `hypr/hyprland.lua` → LOOK AND FEEL) |
-| keybindings | `hypr/hyprland.lua` → KEYBINDINGS (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
+| your keyboard shortcuts | **Settings → Keyboard shortcuts**: click one, press the new keys (or `nothing-settings set keys.<id> "SUPER + T"`; `nothing-settings shortcuts` lists them). Stored in `~/.config/nothing/`, per machine |
+| the default shortcuts (for everyone) | `hypr/hyprland.lua` → the `shortcuts:begin … end` table — one line per shortcut; the Settings app and the `Super+F1` cheat-sheet read it, so nothing else needs updating (README table aside) |
 | autostart | `hypr/hyprland.lua` → `hl.on("hyprland.start", …)` |
 | idle / lock / suspend times | **Settings → Power & lock** (default: `hypr/hypridle.conf`) |
 | lock-screen look | `hypr/hyprlock.conf` |

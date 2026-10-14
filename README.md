@@ -143,6 +143,9 @@ dotfiles/
 
 ## Keybindings
 
+The defaults — change any of them in **Settings → Keyboard shortcuts** (click, press the new keys);
+`Super` `F1` always shows the keys that are active.
+
 | Keys | Action |
 |---|---|
 | `Super` `Return` | Terminal (kitty) |
@@ -162,7 +165,9 @@ dotfiles/
 | `Super` `Ctrl` `←↑→↓` | Resize window |
 | `Alt` `Tab` / `Super` `Tab` | Cycle windows / previous workspace |
 | `Super` `1`–`0` · `Super` `Shift` `1`–`0` | Workspace · move window there |
-| `Print` · `Shift` `Print` · `Super` `Shift` `Print` | Region → clipboard · full → ~/Pictures · record |
+| `Super` `Shift` `S` (or `Print`) | Screenshot of a region → clipboard |
+| `Shift` `Print` · `Super` `Shift` `Print` | Screenshot of the screen → ~/Pictures · record the screen |
+| `Super` `S` · `Super` `Alt` `S` | Scratchpad: show / hide · move window there |
 | `Super` `Shift` `R` | Reload the desktop |
 | 3‑finger swipe | Previous / next workspace (touchpad and touchscreen) |
 | Brightness keys · Power key | Brightness (with popup) · power menu — laptop |
