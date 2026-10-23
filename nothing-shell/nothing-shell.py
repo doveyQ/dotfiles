@@ -40,6 +40,29 @@ WEATHER_SCRIPT = os.path.join(HOME, ".config", "waybar", "scripts", "weather.py"
 CSS_FILE = os.environ.get("NOTHING_SHELL_CSS") or os.path.join(os.path.dirname(os.path.realpath(__file__)), "style.css")
 OUTPUT = os.environ.get("NOTHING_OUTPUT", "")   # "" → the primary / first screen
 WORKSPACES = range(1, int(os.environ.get("NOTHING_WORKSPACES", "10")) + 1)
+PALETTE_FILE = os.path.join(HOME, ".config", "hypr", "theme", "palette.css")
+
+
+def palette(name, default):
+    """A #rrggbb colour from the active theme's palette.css (for Pango markup and cairo)."""
+    try:
+        with open(PALETTE_FILE) as f:
+            css = f.read()
+    except OSError:
+        return default
+    for _ in range(4):   # follow aliases like `@define-color accent @sage;`
+        m = re.search(r"@define-color\s+" + re.escape(name) + r"\s+([^;]+);", css)
+        if not m:
+            return default
+        value = m.group(1).strip()
+        if not value.startswith("@"):
+            return value if re.fullmatch(r"#[0-9a-fA-F]{6}", value) else default
+        name = value[1:]
+    return default
+
+
+def rgb(hexcolor):
+    return tuple(int(hexcolor[i:i + 2], 16) / 255 for i in (1, 3, 5))
 
 
 # ───────────────────────────── client mode ─────────────────────────────
@@ -332,7 +355,7 @@ def weather():
             "hum": f'{cur["humidity"]}%',
             "wind": f'{cur["windspeedKmph"]} km/h',
             "area": area,
-            "days": [(time.strftime("%a", time.strptime(x["date"], "%Y-%m-%d")).upper(),
+            "days": [(time.strftime("%a", time.strptime(x["date"], "%Y-%m-%d")),
                       WEATHER_ICONS.get(x["hourly"][4]["weatherCode"], "󰖐"),
                       x["maxtempC"], x["mintempC"]) for x in days[:3]],
         }
@@ -341,13 +364,16 @@ def weather():
 
 
 # ───────────── dot-matrix drawing ─────────────
-WHITE = (1, 1, 1)
-DIM = (0.17, 0.17, 0.17)
-RED = (0.843, 0.098, 0.129)
+# colours from the theme's palette.css: lit dots, unlit dots, and the accent "head" dot
+FG = rgb(palette("fg", "#e9e4da"))
+BASE = rgb(palette("base", "#1e1c1a"))
+DIM = tuple(b + (f - b) * 0.12 for b, f in zip(BASE, FG))
+MID = tuple(b + (f - b) * 0.25 for b, f in zip(BASE, FG))
+HEAD = rgb(palette("accent", "#9dad94"))
 
 
 class DotGraph(Gtk.DrawingArea):
-    """History graph rendered as a matrix of dots, newest column on the right (red)."""
+    """History graph rendered as a matrix of dots, newest column on the right (accent)."""
 
     def __init__(self, cols=34, rows=7, dot=7, gap=3.6):
         super().__init__()
@@ -369,14 +395,14 @@ class DotGraph(Gtk.DrawingArea):
                 lit = 1
             for row in range(self.rows):
                 on = (self.rows - row) <= lit
-                col = (RED if c == self.cols - 1 else WHITE) if on else DIM
+                col = (HEAD if c == self.cols - 1 else FG) if on else DIM
                 cr.set_source_rgb(*col)
                 cr.arc(c * step + r, row * step + r, r, 0, 2 * math.pi)
                 cr.fill()
 
 
 class DotBar(Gtk.DrawingArea):
-    """Single-row progress bar made of dots; optional red head."""
+    """Single-row progress bar made of dots; optional accent head."""
 
     def __init__(self, n=26, dot=7, gap=4, head=True):
         super().__init__()
@@ -393,7 +419,7 @@ class DotBar(Gtk.DrawingArea):
         r = self.dot / 2
         for i in range(self.n):
             if i < lit:
-                cr.set_source_rgb(*(RED if self.head and i == lit - 1 else WHITE))
+                cr.set_source_rgb(*(HEAD if self.head and i == lit - 1 else FG))
             else:
                 cr.set_source_rgb(*DIM)
             cr.arc(i * (self.dot + self.gap) + r, r + 1, r, 0, 2 * math.pi)
@@ -431,9 +457,9 @@ class DotEq(Gtk.DrawingArea):
             h = 1 + int(3.5 * (0.5 + 0.5 * math.sin(self.phase * (0.9 + c * 0.45) + c * 1.7)))
             for row in range(4):
                 if 4 - row <= h:
-                    cr.set_source_rgb(*(RED if c == 1 and 4 - row == h else WHITE))
+                    cr.set_source_rgb(*(HEAD if c == 1 and 4 - row == h else FG))
                 else:
-                    cr.set_source_rgb(0.25, 0.25, 0.25)
+                    cr.set_source_rgb(*MID)
                 cr.arc(c * 6 + 2.5, row * 4 + 2, 1.5, 0, 2 * math.pi)
                 cr.fill()
 
@@ -467,15 +493,16 @@ class RoundedArt(Gtk.DrawingArea):
             Gdk.cairo_set_source_pixbuf(cr, self.pix, 0, 0)
             cr.paint()
             return
-        cr.set_source_rgb(0.1, 0.1, 0.1)
+        cr.set_source_rgb(*rgb(palette("base", "#1e1c1a")))
         cr.paint()
+        fg = rgb(palette("fg", "#e9e4da"))
         n = 7
         step = s / (n + 1)
         for i in range(n):
             for j in range(n):
                 d = math.hypot(i - 3, j - 3)
                 if d < 3.2:
-                    cr.set_source_rgba(1, 1, 1, 0.12 + 0.5 * (1 - d / 3.2))
+                    cr.set_source_rgba(*fg, 0.10 + 0.4 * (1 - d / 3.2))
                     cr.arc(step * (i + 1), step * (j + 1), 2.2, 0, 2 * math.pi)
                     cr.fill()
 
@@ -514,8 +541,9 @@ class Island(LayerWindow):
 
     def __init__(self, shell):
         E = GtkLayerShell.Edge
-        # OVERLAY so it sits above waybar's full-width surface; hidden while fullscreen
-        super().__init__("nothing-island", [E.TOP], {E.TOP: 8}, layer=GtkLayerShell.Layer.OVERLAY)
+        # OVERLAY so it sits above waybar's full-width surface; hidden while fullscreen.
+        # Same top margin and height as the bar, so the compact island is the bar's centre.
+        super().__init__("nothing-island", [E.TOP], {E.TOP: 6}, layer=GtkLayerShell.Layer.OVERLAY)
         self.shell = shell
         self.expanded = False
         self.pinned = False
@@ -661,7 +689,7 @@ class Island(LayerWindow):
         card.pack_start(self.art, False, False, 0)
         col = box(vertical=True, spacing=4)
         top = box(spacing=8)
-        self.m_player = label("NO MEDIA", "m-player")
+        self.m_player = label("Not Playing", "m-player")
         self.m_cycle = icon_button("󰒝", "mini", "Next player", self.shell.media.cycle)
         top.pack_start(self.m_player, False, False, 0)
         top.pack_end(self.m_cycle, False, False, 0)
@@ -830,7 +858,7 @@ class Island(LayerWindow):
 
     def refresh_panel(self, light=False):
         self.p_clock.set_text(time.strftime("%H:%M"))
-        self.p_date.set_text(time.strftime("%A, %d %B").upper())
+        self.p_date.set_text(time.strftime("%A, %-d %B"))
         if not self._vol_lock:
             vol, muted = Sys.volume()
             self._vol_lock = True
@@ -846,7 +874,7 @@ class Island(LayerWindow):
             self.w_icon.set_text(w["icon"])
             self.w_temp.set_text(w["temp"])
             self.w_cond.set_text(w["cond"])
-            self.w_meta.set_text(f"{w['area'].upper()} · FEELS {w['feels']} · {w['hum']}")
+            self.w_meta.set_text(f"{w['area']} · Feels {w['feels']} · {w['hum']}")
             for c in self.w_days.get_children():
                 self.w_days.remove(c)
             for day, ic, hi, lo in w["days"]:
@@ -872,7 +900,7 @@ class Island(LayerWindow):
         set_cls(self.net_btn, "offline", kind == "offline")
         set_cls(self.wifi_t, "on", wifi)
         set_cls(self.bt_t, "on", bt)
-        self.sink_lbl.set_text(sink.upper())
+        self.sink_lbl.set_text(sink)
 
     def _on_vol(self, scale):
         if self._vol_lock:
@@ -967,7 +995,7 @@ class Media:
         isl.eq.set_playing(playing)
         isl.m_cycle.set_visible(len(self.players()) > 1)
         if not p:
-            isl.m_player.set_text("NO MEDIA")
+            isl.m_player.set_text("Not Playing")
             isl.m_title.set_text("Nothing playing")
             isl.m_artist.set_text("Start Spotify, YouTube or any MPRIS player")
             isl.m_play.get_child().set_text("󰐊")
@@ -977,7 +1005,7 @@ class Media:
             self._art_url = None
             return
         name = (p.props.player_name or "player").split(".")[0]
-        isl.m_player.set_text(("● " if playing else "") + name.upper())
+        isl.m_player.set_text(("● " if playing else "") + name.capitalize())
         set_cls(isl.m_player, "live", playing)
         isl.m_title.set_text(self._meta(p, "xesam:title") or "Unknown title")
         isl.m_artist.set_text(self._meta(p, "xesam:artist") or self._meta(p, "xesam:album") or name.title())
@@ -1002,7 +1030,7 @@ class Media:
             isl.m_time.set_text(f"{f(pos)} / {f(length)}")
         else:
             isl.m_bar.set_value(0)
-            isl.m_time.set_text("LIVE" if p.props.playback_status == Playerctl.PlaybackStatus.PLAYING else "")
+            isl.m_time.set_text("Live" if p.props.playback_status == Playerctl.PlaybackStatus.PLAYING else "")
 
     def _load_art(self, url):
         if url == self._art_url:
@@ -1091,7 +1119,7 @@ class NotifyLog:
         dnd = Sys.dnd()
         n = len(self.items)
         glyph = "󰂛" if dnd else "󰂚"
-        return json.dumps(ensure_ascii=False, obj={"text": glyph + ("<span foreground='#d71921'><sup>●</sup></span>" if n else ""),
+        return json.dumps(ensure_ascii=False, obj={"text": glyph + (f"<span foreground='{palette('accent', '#9dad94')}'><sup>●</sup></span>" if n else ""),
                            "class": ("dnd " if dnd else "") + ("has" if n else "none"),
                            "tooltip": f"{n} notification{'s' if n != 1 else ''}" + (" · DND" if dnd else "")})
 
@@ -1132,7 +1160,7 @@ class Control(LayerWindow):
         # header
         head = box(spacing=8)
         head.pack_start(label("●", "red-dot"), False, False, 0)
-        head.pack_start(label("CONTROL CENTER", "cc-title"), False, False, 0)
+        head.pack_start(label("Control Center", "cc-title"), False, False, 0)
         self.uptime = label("", "tiny dim", xalign=1)
         head.pack_end(self.uptime, False, False, 0)
         root.pack_start(head, False, False, 0)
@@ -1173,9 +1201,9 @@ class Control(LayerWindow):
         tg = box(spacing=7)
         tg.set_homogeneous(True)
         self.toggles = {}
-        for key, glyph, name in (("wifi", "󰤨", "WI-FI"), ("bt", "󰂯", "BLUETOOTH"),
-                                 ("dnd", "󰂛", "SILENT"), ("mic", "󰍬", "MIC"),
-                                 ("night", "󰖔", "NIGHT")):
+        for key, glyph, name in (("wifi", "󰤨", "Wi-Fi"), ("bt", "󰂯", "Bluetooth"),
+                                 ("dnd", "󰂛", "Silent"), ("mic", "󰍬", "Mic"),
+                                 ("night", "󰖔", "Night")):
             b = Gtk.Button()
             add_cls(b, "tile")
             col = box(vertical=True, spacing=4)
@@ -1189,9 +1217,9 @@ class Control(LayerWindow):
 
         # notifications
         nh = box(spacing=8)
-        self.n_title = label("NOTIFICATIONS", "section")
+        self.n_title = label("Notifications", "section")
         nh.pack_start(self.n_title, False, False, 0)
-        clear = Gtk.Button(label="CLEAR")
+        clear = Gtk.Button(label="Clear")
         add_cls(clear, "chip", "danger-hover")
         clear.connect("clicked", lambda *_: self.shell.notifs.clear())
         nh.pack_end(clear, False, False, 0)
@@ -1206,11 +1234,11 @@ class Control(LayerWindow):
         pw = box(spacing=10, cls="power-row")
         pw.set_homogeneous(True)
         for key, glyph, name, cmd, confirm in (
-                ("lock", "󰌾", "LOCK", "loginctl lock-session", False),
-                ("sleep", "󰤄", "SLEEP", "systemctl suspend", False),
-                ("logout", "󰍃", "EXIT", "hyprctl dispatch 'hl.dsp.exit()'", True),
-                ("reboot", "󰜉", "REBOOT", "systemctl reboot", True),
-                ("power", "󰐥", "OFF", "systemctl poweroff", True)):
+                ("lock", "󰌾", "Lock", "loginctl lock-session", False),
+                ("sleep", "󰤄", "Sleep", "systemctl suspend", False),
+                ("logout", "󰍃", "Log Out", "hyprctl dispatch 'hl.dsp.exit()'", True),
+                ("reboot", "󰜉", "Restart", "systemctl reboot", True),
+                ("power", "󰐥", "Shut Down", "systemctl poweroff", True)):
             b = Gtk.Button()
             add_cls(b, "power-btn")
             col = box(vertical=True, spacing=3)
@@ -1230,7 +1258,7 @@ class Control(LayerWindow):
     def _power(self, key, cmd, confirm, btn, lbl, name):
         if confirm and key not in self._confirm:
             set_cls(btn, "confirm", True)
-            lbl.set_text("AGAIN?")
+            lbl.set_text("Confirm?")
 
             def reset():
                 self._confirm.pop(key, None)
@@ -1249,17 +1277,17 @@ class Control(LayerWindow):
         for c in self.n_list.get_children():
             self.n_list.remove(c)
         items = self.shell.notifs.items if self.shell.notifs else []
-        self.n_title.set_text(f"NOTIFICATIONS · {len(items)}" if items else "NOTIFICATIONS")
+        self.n_title.set_text(f"Notifications · {len(items)}" if items else "Notifications")
         if not items:
             e = box(vertical=True, spacing=6, cls="empty")
             e.pack_start(label("· · ·", "empty-dots", xalign=0.5), False, False, 0)
-            e.pack_start(label("ALL CLEAR", "tiny dim", xalign=0.5), False, False, 0)
+            e.pack_start(label("All caught up", "tiny dim", xalign=0.5), False, False, 0)
             self.n_list.pack_start(e, False, False, 0)
         for n in items[:30]:
             card = box(spacing=10, cls="card notif")
             col = box(vertical=True, spacing=2)
             top = box(spacing=6)
-            top.pack_start(label(n["app"].upper(), "n-app"), False, False, 0)
+            top.pack_start(label(n["app"], "n-app"), False, False, 0)
             top.pack_start(label(time_ago(n["ts"]), "tiny dim"), False, False, 0)
             col.pack_start(top, False, False, 0)
             col.pack_start(label(n["summary"], "n-sum", ellipsize=True), False, False, 0)

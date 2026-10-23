@@ -1,15 +1,9 @@
-/* Nothing OS — floating island
-   black #000 · surface #141414 · glass #1e1e1e/80% · white #fff · red #d71921 */
-
-@define-color bg      rgba(20, 20, 20, 0.92);
-@define-color glass   rgba(30, 30, 30, 0.80);
-@define-color line    rgba(255, 255, 255, 0.08);
-@define-color fg      #ffffff;
-@define-color dim     #8a8a8a;
-@define-color red     #d71921;
+/* Copenhagen — one continuous floating glass bar.
+   Colours + fonts: ~/.config/hypr/theme/palette.css (switch themes there, not here).
+   The blur behind the bar is Hyprland's (layer rule "glass-waybar"; GTK can't blur). */
+@import url("../hypr/theme/palette.css");
 
 * {
-  font-family: "Inter", "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
   font-size: 13px;
   font-weight: 500;
   min-height: 0;
@@ -19,61 +13,79 @@
   text-shadow: none;
 }
 
+/* the bar itself is the single surface */
 window#waybar {
-  background: transparent;
+  background: @glass;
+  border: 1px solid @line;
+  border-radius: 16px;
   color: @fg;
+  transition: background 240ms ease;
 }
+window#waybar.empty, window#waybar.fullscreen { background: @glass_hi; }
 
 tooltip {
-  background: @bg;
+  background: @glass_hi;
   border: 1px solid @line;
-  border-radius: 14px;
+  border-radius: 12px;
 }
 tooltip label { color: @fg; padding: 4px 6px; }
 
-/* ── pills ─────────────────────────────── */
-#custom-logo,
-#system {
-  background: @bg;
-  border: 1px solid @line;
-  border-radius: 999px;
-  transition: background 200ms ease;
+/* every item is a soft hover target inside the bar — no separate pills */
+#custom-logo, #custom-more, #tray, #cpu, #memory, #network, #custom-clipboard,
+#battery, #custom-notification, #custom-quick, #custom-power {
+  color: @fg;
+  padding: 0 9px;
+  margin: 5px 1px;
+  border-radius: 10px;
+  transition: background 180ms ease, color 180ms ease;
 }
+#custom-logo:hover, #custom-more:hover, #cpu:hover, #memory:hover, #network:hover,
+#custom-clipboard:hover, #battery:hover, #custom-notification:hover,
+#custom-quick:hover, #custom-power:hover { background: @hover; }
 
+/* ── left ── */
 #custom-logo {
   font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font";
-  font-size: 17px;
-  min-width: 34px;
-  padding: 0 4px;
+  font-size: 16px;
+  margin-left: 6px;
+  padding: 0 10px;
 }
-#custom-logo:hover { background: @fg; color: #000; }
 
-#system { padding: 0 12px; }
-#tray, #custom-clipboard, #cpu, #memory, #battery,
-#custom-notification, #custom-power { padding: 0 8px; }
+/* ── right ── */
+#system { padding: 0 6px 0 4px; }
 
-/* ── right pill ── */
-#system label, #tray { color: #d0d0d0; }
-#cpu, #memory, #battery { font-family: "Ndot 55", "Inter"; font-size: 13px; letter-spacing: 1px; }
-#custom-notification,
-#custom-clipboard,
-#custom-power { font-size: 15px; }
-#custom-notification.dnd { color: @dim; }
-#custom-power { color: @fg; }
-#battery.warning:not(.charging) { color: @fg; }
-#battery.critical:not(.charging) { color: @red; }
-#cpu:hover, #memory:hover, #battery:hover,
-#custom-power:hover,
-#custom-clipboard:hover,
-#custom-notification:hover { color: @red; }
+#network, #custom-clipboard, #custom-notification,
+#custom-quick, #custom-power, #custom-more { font-size: 15px; }
+#custom-more { color: @mute; }
+#custom-quick, #custom-power { color: @dim; }
+#custom-quick:hover, #custom-power:hover { color: @fg; }
+#network.disconnected { color: @mute; }
+#custom-notification.dnd { color: @mute; }
+
+/* drawer children: quieter, numbers don't jitter */
+.drawer-child { color: @dim; }
+#cpu, #memory, #network.speed, #battery {
+  font-feature-settings: "tnum";
+  font-size: 12px;
+}
+#network.speed {
+  color: @dim;
+  min-width: 150px;
+  padding: 0 6px;
+}
+#network.speed.disconnected { min-width: 0; padding: 0; }
+#tray { padding: 0 6px; }
 #tray > .needs-attention { -gtk-icon-effect: highlight; }
 
-/* ── red recording dot ── */
+#battery.warning:not(.charging)  { color: @warn; }
+#battery.critical:not(.charging) { color: @alert; }
+
+/* ── recording dot (clay, gently breathing) ── */
 #custom-record { padding: 0; }
 #custom-record.recording {
-  color: @red;
-  font-size: 15px;
+  color: @alert;
+  font-size: 13px;
   padding: 0 8px 0 4px;
-  animation: blink 1.2s steps(2, start) infinite;
+  animation: breathe 1.6s ease-in-out infinite alternate;
 }
-@keyframes blink { to { color: transparent; } }
+@keyframes breathe { to { color: alpha(@alert, 0.25); } }

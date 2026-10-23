@@ -1,11 +1,13 @@
-// Nothing OS — top bar
-// Left: logo pill · Center: (dynamic island drawn by nothing-shell) · Right: status pill
+// Copenhagen — one continuous floating glass bar
+// Left: launcher · Centre: the island (drawn by nothing-shell, sits inside the bar)
+// Right: drawer (tray · cpu · memory, revealed on hover) · net speed · Wi-Fi · clipboard
+//        · battery · notifications · quick settings · power
 {
   "layer": "top",
   "position": "top",
   "include": ["~/.config/waybar/local.jsonc"],   // per machine, e.g. "output" — see local.example.jsonc
   "height": 36,
-  "margin-top": 8,
+  "margin-top": 6,
   "margin-left": 12,
   "margin-right": 12,
   "spacing": 0,
@@ -19,7 +21,6 @@
   "custom/logo": {
     "format": "",
     "tooltip": false,
-    "tooltip": false,
     "on-click": "rofi -show drun -theme ~/.config/rofi/nothing.rasi",
     "on-click-right": "~/.local/bin/nothing-settings"
   },
@@ -28,43 +29,76 @@
   "group/system": {
     "orientation": "horizontal",
     "modules": [
-      "tray",
+      "group/more",
       "custom/record",
+      "network#speed",
+      "network",
       "custom/clipboard",
-      "cpu",
-      "memory",
       "battery",
       "custom/notification",
+      "custom/quick",
       "custom/power"
     ]
   },
 
+  // hover the chevron → tray, CPU and memory slide out to its left
+  "group/more": {
+    "orientation": "horizontal",
+    "drawer": {
+      "transition-duration": 320,
+      "transition-left-to-right": false,
+      "children-class": "drawer-child"
+    },
+    "modules": ["custom/more", "tray", "cpu", "memory"]
+  },
+  "custom/more": { "format": "󰅁", "tooltip": false },
+
   "tray": { "icon-size": 15, "spacing": 10 },
 
-  "custom/clipboard": {
-    "format": "󰅌",
-    "tooltip-format": "Clipboard history",
-    "on-click": "cliphist list | rofi -dmenu -theme ~/.config/rofi/nothing.rasi | cliphist decode | wl-copy"
-  },
-
   "cpu": {
-    "format": "󰍛 {usage}",
+    "format": "CPU {usage}%",
     "interval": 3,
     "tooltip": false,
     "on-click": "~/.local/bin/nothing-shell control toggle"
   },
   "memory": {
-    "format": "󰘚 {percentage}",
+    "format": "MEM {percentage}%",
     "interval": 5,
     "tooltip-format": "{used:0.1f} / {total:0.1f} GiB",
     "on-click": "~/.local/bin/nothing-shell control toggle"
   },
 
+  "network#speed": {
+    "interval": 2,
+    "format": "󰇚 {bandwidthDownBytes}   󰕒 {bandwidthUpBytes}",
+    "format-disconnected": "",
+    "tooltip": false
+  },
+
+  "network": {
+    "format-wifi": "{icon}",
+    "format-ethernet": "󰈀",
+    "format-linked": "󰤫",
+    "format-disconnected": "󰤮",
+    "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+    "tooltip-format-wifi": "{essid} · {signalStrength}%\n{ipaddr}",
+    "tooltip-format-ethernet": "{ifname} · {ipaddr}",
+    "tooltip-format-disconnected": "Offline",
+    "on-click": "~/.local/bin/nothing-settings network",
+    "on-click-right": "nm-connection-editor"
+  },
+
+  "custom/clipboard": {
+    "format": "󰅌",
+    "tooltip-format": "Clipboard history  (Super+V)",
+    "on-click": "cliphist list | rofi -dmenu -theme ~/.config/rofi/nothing.rasi | cliphist decode | wl-copy"
+  },
+
   // laptop only — Waybar hides the module when there is no battery
   "battery": {
-    "format": "{icon} {capacity}",
-    "format-charging": "󰂄 {capacity}",
-    "format-plugged": "󰚥 {capacity}",
+    "format": "{icon} {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-plugged": "󰚥 {capacity}%",
     "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
     "states": { "warning": 20, "critical": 10 },
     "interval": 30,
@@ -88,6 +122,13 @@
     "on-click": "~/.local/bin/nothing-shell control toggle",
     "on-click-right": "~/.local/bin/nothing-settings dnd",
     "escape": false
+  },
+
+  "custom/quick": {
+    "format": "",
+    "tooltip-format": "Quick settings  (Super+N)",
+    "on-click": "~/.local/bin/nothing-shell control toggle",
+    "on-click-right": "~/.local/bin/nothing-settings"
   },
 
   "custom/power": {

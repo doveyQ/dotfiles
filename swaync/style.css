@@ -1,89 +1,76 @@
-/* Nothing OS notifications — popups (history lives in nothing-shell's control center) */
+/* Copenhagen notifications — popups (history lives in nothing-shell's quick settings)
+   Colours + fonts: ~/.config/hypr/theme/palette.css                                  */
 @import url("/etc/xdg/swaync/style.css");
+@import url("../hypr/theme/palette.css");
 
 :root {
-  --cc-bg: rgba(10, 10, 10, 0.88);
-  --noti-border-color: rgba(255, 255, 255, 0.07);
-  --noti-bg: 30, 30, 30;
-  --noti-bg-alpha: 0.80;
-  --noti-bg-darker: #121212;
-  --noti-bg-hover: #262626;
+  --cc-bg: alpha(@base, 0.86);
+  --noti-border-color: @line;
+  --noti-bg: 46, 43, 39;
+  --noti-bg-alpha: 0.78;
+  --noti-bg-darker: @base;
+  --noti-bg-hover: alpha(@fg, 0.10);
   --noti-bg-focus: transparent;
-  --noti-close-bg: #2a2a2a;
-  --noti-close-bg-hover: #d71921;
-  --text-color: #ffffff;
-  --text-color-disabled: #6b6b6b;
-  --bg-selected: #d71921;
-  --border-radius: 24px;
+  --noti-close-bg: alpha(@fg, 0.10);
+  --noti-close-bg-hover: alpha(@fg, 0.20);
+  --text-color: @fg;
+  --text-color-disabled: @mute;
+  --bg-selected: @accent;
+  --border-radius: 18px;
   --font-size-body: 13px;
   --font-size-summary: 14px;
   --mpris-album-art-icon-size: 72px;
-  --mpris-album-art-overlay: rgba(0, 0, 0, 0.70);
-
-  --card: rgba(30, 30, 30, 0.80);
-  --red: #d71921;
-}
-
-* {
-  font-family: "Inter", "JetBrainsMono Nerd Font", "Symbols Nerd Font", sans-serif;
+  --mpris-album-art-overlay: alpha(@base, 0.70);
 }
 
 /* ── panel ─────────────────────────────── */
 .control-center {
   background: var(--cc-bg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 32px;
+  border: 1px solid @line;
+  border-radius: 24px;
   padding: 14px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 40px alpha(black, 0.35);
 }
 
 .widget { margin: 6px 4px; }
 
-/* dot-matrix header with a red dot, like Nothing's widgets */
 .widget-label > label {
-  font-family: "Ndot 57", "Inter";
-  font-size: 18px;
-  letter-spacing: 2px;
-  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+  color: @fg;
   padding: 6px 10px 2px;
 }
 
 /* ── notifications ── */
 .widget-title > label {
-  font-family: "Ndot 55", "Inter";
-  font-size: 13px;
-  letter-spacing: 2px;
-  color: #8a8a8a;
+  font-size: 12px;
+  font-weight: 600;
+  color: @dim;
 }
 .widget-title > button {
-  border-radius: 999px;
-  background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #ffffff;
+  border-radius: 10px;
+  background: @card;
+  border: 1px solid @line;
+  color: @fg;
   padding: 4px 14px;
-  font-family: "Ndot 55", "Inter";
 }
-.widget-title > button:hover { background: var(--red); }
+.widget-title > button:hover { background: @card2; }
 
-.control-center .control-center-list-placeholder {
-  font-family: "Ndot 55", "Inter";
-  letter-spacing: 2px;
-  opacity: 0.4;
-}
+.control-center .control-center-list-placeholder { opacity: 0.4; }
 
 .notification-row .notification-background .notification {
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(20, 20, 20, 0.92);
+  border-radius: 18px;
+  border: 1px solid @line;
+  background: alpha(@base, 0.90);
 }
 .notification-row .notification-background .notification.critical {
-  border: 1px solid var(--red);
+  border: 1px solid alpha(@alert, 0.7);
 }
 .notification-row .notification-background .notification .notification-default-action .notification-content .text-box .summary {
   font-weight: 600;
 }
 .notification-row .notification-background .notification .notification-default-action .notification-content .image {
-  border-radius: 14px;
+  border-radius: 12px;
 }
 .close-button { border-radius: 999px; }
 
@@ -95,13 +82,12 @@
 .control-center .control-center-list .notification { background: transparent; box-shadow: none; }
 .widget-slider, .widget-volume { margin: 6px 4px; }
 
-
-
-/* popups: slim black glass cards */
+/* popups: smoky glass cards with soft depth */
 .floating-notifications .notification-row .notification-background .notification {
-  background: rgba(10, 10, 10, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  background: @glass_hi;
+  border: 1px solid @line;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px alpha(black, 0.30);
 }
-.notification .app-name, .notification .summary { color: #ffffff; }
+.notification .app-name, .notification .summary { color: @fg; }
+.notification .body { color: alpha(@fg, 0.85); }

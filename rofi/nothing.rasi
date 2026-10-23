@@ -1,11 +1,14 @@
-/* Nothing OS launcher — black glass card, pill rows, dot-matrix search */
+/* Launcher — Spotlight-like smoky glass card, soft rows
+   Colours + fonts: ~/.config/hypr/theme/palette.rasi                    */
+@import "~/.config/hypr/theme/palette.rasi"
+
 configuration {
   modi: "drun,run,window";
   show-icons: true;
   icon-theme: "Papirus-Dark";
-  display-drun: "APPS";
-  display-run: "RUN";
-  display-window: "WINDOWS";
+  display-drun: "Apps";
+  display-run: "Run";
+  display-window: "Windows";
   drun-display-format: "{name}";
   sort: true;
   sorting-method: "fzf";
@@ -16,65 +19,62 @@ configuration {
 }
 
 * {
-  bg: #0a0a0af2; card: #1e1e1ecc; line: #ffffff14;
-  fg: #ffffff; dim: #8a8a8a; red: #d71921;
   background-color: transparent;
   text-color: @fg;
-  font: "Inter 12";
+  font: @font-ui;
 }
 
 window {
-  width: 580px;
-  border: 1px; border-color: @line; border-radius: 32px;
-  background-color: @bg;
-  padding: 20px;
+  width: 600px;
+  border: 1px; border-color: @line; border-radius: 22px;
+  background-color: @glass;
+  padding: 16px;
   location: north;
   y-offset: 120px;
 }
-mainbox  { spacing: 14px; children: [ inputbar, mode-switcher, listview ]; }
+mainbox  { spacing: 12px; children: [ inputbar, mode-switcher, listview ]; }
 
 inputbar {
   background-color: @card;
-  border-radius: 999px;
-  padding: 13px 20px;
+  border-radius: 14px;
+  padding: 12px 18px;
   spacing: 12px;
-  children: [ textbox-dot, entry ];
+  children: [ textbox-icon, entry ];
 }
-textbox-dot   { content: "●"; text-color: @red; expand: false; vertical-align: 0.5; }
+textbox-icon  { content: "⌕"; text-color: @dim; expand: false; vertical-align: 0.5; }
 entry {
-  placeholder: "SEARCH";
-  placeholder-color: @dim;
-  font: "Ndot 55 13";
+  placeholder: "Search";
+  placeholder-color: @mute;
   cursor: text;
 }
 
 mode-switcher { spacing: 8px; enabled: false; }
 button {
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: 10px;
   background-color: @card;
   text-color: @dim;
-  font: "Ndot 55 10";
+  font: @font-ui-sm;
 }
-button selected { background-color: @fg; text-color: #000000; }
+button selected { background-color: @accent; text-color: @on-accent; }
 
 listview {
   lines: 7; columns: 1;
-  spacing: 4px;
+  spacing: 2px;
   scrollbar: false;
   fixed-height: true;
   cycle: true;
 }
 element {
-  padding: 10px 16px;
-  border-radius: 999px;
+  padding: 9px 14px;
+  border-radius: 12px;
   spacing: 14px;
   cursor: pointer;
 }
 element normal.normal, element alternate.normal { background-color: transparent; }
-element selected.normal { background-color: @fg; text-color: #000000; }
+element selected.normal { background-color: @card2; text-color: @fg; }
 element-icon { size: 24px; cursor: inherit; }
 element-text { text-color: inherit; vertical-align: 0.5; cursor: inherit; }
 
-message  { padding: 10px 16px; border-radius: 20px; background-color: @card; }
+message  { padding: 10px 16px; border-radius: 14px; background-color: @card; }
 textbox  { text-color: @dim; }

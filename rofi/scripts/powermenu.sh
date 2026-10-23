@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Nothing power overlay.  Single-key accelerators: p r s l e · Esc cancels.
+# Session menu.  Single-key accelerators: p r s l e · Esc cancels.
 theme=~/.config/rofi/powermenu.rasi
+hint=$(sed -n 's/^ *dim: *\(#[0-9a-fA-F]\{6\}\).*/\1/p' ~/.config/hypr/theme/palette.rasi 2>/dev/null); hint=${hint:-#a39c91}
 pidof rofi >/dev/null && { pkill -x rofi; exit 0; }
 
-tile() { printf "<span font_family='Symbols Nerd Font' size='28pt'>%s</span>\n\n<span font_family='Ndot 55' size='13pt' letter_spacing='1024'>%s</span>  <span font_family='Ndot 57' size='13pt' foreground='#d71921'>%s</span>" "$1" "$2" "$3"; }
+tile() { printf "<span font_family='Symbols Nerd Font' size='26pt'>%s</span>\n\n<span size='12pt' weight='500'>%s</span>  <span size='10pt' foreground='%s'>%s</span>" "$1" "$2" "$hint" "$3"; }
 
 entries=(
-  "$(tile 󰐥 'POWER' 'P')"
-  "$(tile 󰜉 'REBOOT' 'R')"
-  "$(tile 󰤄 'SLEEP' 'S')"
-  "$(tile 󰌾 'LOCK' 'L')"
-  "$(tile 󰍃 'LOG OUT' 'E')"
+  "$(tile 󰐥 'Power off' 'P')"
+  "$(tile 󰜉 'Restart' 'R')"
+  "$(tile 󰤄 'Sleep' 'S')"
+  "$(tile 󰌾 'Lock' 'L')"
+  "$(tile 󰍃 'Log out' 'E')"
 )
 
 choice=$(printf '%s|' "${entries[@]}" | rofi -dmenu -sep '|' -eh 5 -markup-rows -format i \

@@ -1,4 +1,7 @@
-/* Nothing OS power overlay — full-screen dim, five dot-matrix tiles */
+/* Session menu — full-screen warm scrim, five frosted tiles
+   Colours + fonts: ~/.config/hypr/theme/palette.rasi          */
+@import "~/.config/hypr/theme/palette.rasi"
+
 configuration {
   show-icons: false;
   hover-select: true;
@@ -6,14 +9,12 @@ configuration {
   me-accept-entry: "MousePrimary";
 }
 * {
-  bg: #000000c7; card: #141414f0; line: #ffffff14;
-  fg: #ffffff; dim: #8a8a8a; red: #d71921;
   background-color: transparent; text-color: @fg;
-  font: "Inter 11";
+  font: @font-ui;
 }
 window {
   fullscreen: true;
-  background-color: @bg;
+  background-color: @scrim;
   padding: 0;
 }
 mainbox {
@@ -22,9 +23,8 @@ mainbox {
 }
 dummy-top, dummy-bottom { expand: true; }
 textbox-title {
-  content: "<span color='#d71921'>●</span>  SYSTEM";
-  markup: true;
-  font: "Ndot 57 20";
+  content: "Session";
+  font: @font-display;
   horizontal-align: 0.5;
   expand: false;
   text-color: @fg;
@@ -41,8 +41,8 @@ listview {
 element {
   orientation: vertical;
   padding: 26px 0 22px 0;
-  border: 1px; border-color: @line; border-radius: 28px;
-  background-color: @card;
+  border: 1px; border-color: @line; border-radius: 22px;
+  background-color: @glass;
   cursor: pointer;
 }
 element-text {
@@ -50,12 +50,12 @@ element-text {
   text-color: inherit;
   cursor: inherit;
 }
-element selected.normal { background-color: @fg; text-color: #000000; border-color: @fg; }
-element selected.urgent { background-color: @red; text-color: @fg; border-color: @red; }
+element selected.normal { background-color: @card2; text-color: @fg; border-color: @line; }
+element selected.urgent { background-color: @alert; text-color: @on-accent; border-color: @alert; }
 element normal.urgent   { text-color: @fg; }
 textbox-hint {
-  content: "P  POWER OFF   ·   R  REBOOT   ·   S  SLEEP   ·   L  LOCK   ·   E  LOG OUT   ·   ESC  CANCEL";
-  font: "Ndot 55 10";
+  content: "P  Power off   ·   R  Restart   ·   S  Sleep   ·   L  Lock   ·   E  Log out   ·   Esc  Cancel";
+  font: @font-ui-sm;
   text-color: @dim;
   horizontal-align: 0.5;
   expand: false;

@@ -1,52 +1,52 @@
-/* Desktop widgets — dark glass cards on the wallpaper */
-* {
-  font-family: "Inter", "Symbols Nerd Font", sans-serif;
-  border: none; border-radius: 0; min-height: 0; box-shadow: none;
-}
+/* Desktop widgets — frosted cards on the wallpaper, a thin SF Pro clock */
+@import url("../hypr/theme/palette.css");
+
+* { border: none; border-radius: 0; min-height: 0; box-shadow: none; }
 window#waybar.desktop, window#waybar { background: transparent; }
 
 /* weather cards */
 #custom-w-cond, #custom-w-temp, #custom-w-hilo {
-  background: rgba(30, 30, 30, 0.80);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: @glass;
+  color: @fg;
+  border: 1px solid @line;
 }
 #custom-w-cond {
-  border-radius: 999px;
+  border-radius: 22px;
   min-height: 74px;
   padding: 0 34px 0 22px;
   margin-bottom: 8px;
   font-size: 13px;
 }
 #custom-w-temp, #custom-w-hilo {
-  border-radius: 999px;      /* circles */
+  border-radius: 22px;
   min-width: 82px;
   min-height: 82px;
   margin-right: 8px;
 }
-#custom-w-temp { font-size: 24px; font-weight: 300; }
-#custom-w-hilo { font-size: 12px; }
+#custom-w-temp { font-size: 26px; font-weight: 300; }
+#custom-w-hilo { font-size: 12px; color: @dim; }
 
 /* clock stack (right) */
 #clockstack { margin-top: 10px; }
 #clock.date {
   font-size: 15px;
   font-weight: 500;
-  color: #2a2a2a;
+  color: alpha(@fg, 0.85);
   padding-left: 6px;
 }
 #clock.big {
-  font-family: "Ndot 57";
   font-size: 104px;
-  color: #141414;
-  letter-spacing: 4px;
+  font-weight: 200;
+  color: alpha(@fg, 0.92);
+  letter-spacing: -2px;
+  font-feature-settings: "tnum";
 }
 #custom-sys {
-  font-family: "JetBrainsMono Nerd Font", monospace;
   font-size: 12px;
-  color: #ffffff;
-  background: rgba(30, 30, 30, 0.80);
-  border-radius: 20px;
+  color: @fg;
+  background: @glass;
+  border: 1px solid @line;
+  border-radius: 18px;
   padding: 12px 18px;
   margin-top: 12px;
 }
