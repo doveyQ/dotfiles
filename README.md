@@ -35,15 +35,20 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
 ## Features
 
-- **macOS menu bar** — one frosted bar:  Apple menu (About, Settings, Force Quit, Sleep,
-  Restart, Shut Down, Lock, Log Out) · bold app name · window title · workspace dots in the
+- **macOS menu bar** — one frosted bar: Tux system menu (About, Settings, Force Quit, Clear
+  Clipboard History, Sleep, Restart, Shut Down, Lock, Log Out) · time + workspace dots in the
   centre · hover drawer (tray, CPU, memory) · network speed · Bluetooth · Wi‑Fi · battery ·
-  clipboard · Control Center · `Fri 23 Oct  1:07 PM`.
+  clipboard · Control Center · date. It never shows which app, page or video is focused.
 - **Light & Dark mode** — `Super` `Shift` `T`, the Control Center tile, Settings → Appearance or
   `nothing-theme toggle`: menu bar, Control Center, widgets, notifications, launcher, dock,
   Settings, kitty, GTK apps, lock screen and wallpaper switch live.
-- **Desktop widgets** — Weather (sky gradient for the current condition), analog Clock,
-  Calendar (month grid) and System (CPU / memory / disk activity rings + thermals).
+- **Desktop widgets** — Weather, Clock, Calendar and System, each small or medium. Drag them
+  anywhere, click them (forecast, analog ↔ digital, calendar, Control Center), right-click for
+  size / style / remove / add, or *Edit Widgets* for macOS-style remove badges and **Add
+  Widget**. Also in Settings → Appearance and `nothing-shell widgets …`.
+- **Security & privacy** — see [the Guide §4](docs/GUIDE.md#security--privacy): owner-only
+  sockets and data files, no secrets on command lines, validated configs, nothing private on the
+  lock screen or in the bar, password-manager clips kept out of clipboard history.
 - **Dynamic island** (`nothing-shell`) — the workspace dots in the bar's centre; hover them for a
   panel with clock, weather, calendar, media and volume. Hover (or click) and it morphs into a panel: big clock, weather with a
   3‑day forecast, calendar, MPRIS media player (Spotify, Firefox, Chromium/YouTube, Netflix …)

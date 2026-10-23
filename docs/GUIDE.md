@@ -170,14 +170,15 @@ NVIDIA: remove the `LIBVA_DRIVER_NAME` line and follow the Hyprland wiki's NVIDI
 
 ### The menu bar
 
-One continuous frosted bar, like macOS. **Left:** the  — the Apple menu (About This
-Computer, System Settings…, Force Quit Window, Sleep, Restart…, Shut Down…, Lock Screen,
-Log Out…; right-click → app launcher) · the focused app's name in bold · its window title.
-**Centre:** the workspace dots (the island, below). **Right:** a chevron that slides out the
-tray, CPU and memory on hover · download / upload speed · Bluetooth (click → Settings,
-right-click → Blueman) · Wi-Fi (click → Settings → Network, right-click → connection editor)
-· battery (laptops) · clipboard history · Control Center (right-click → Light/Dark) · date
-and time — click for Control Center and notifications, right-click for Do Not Disturb.
+One continuous frosted bar, like macOS. **Left:** Tux — the system menu (About This
+Computer, System Settings…, Force Quit Window, Clear Clipboard History, Sleep, Restart…,
+Shut Down…, Lock Screen, Log Out…; right-click → app launcher). **Centre:** the time and the
+workspace dots (the island, below). **Right:** a chevron that slides out the tray, CPU and
+memory on hover · download / upload speed · Bluetooth (click → Settings, right-click →
+Blueman) · Wi-Fi (click → Settings → Network, right-click → connection editor) · battery
+(laptops) · clipboard history · Control Center (right-click → Light/Dark) · the date — click
+for Control Center and notifications, right-click for Do Not Disturb. By design the bar never
+shows the focused app, window title, page or video.
 
 ### Light & Dark mode — `Super` `Shift` `T`
 
@@ -190,10 +191,26 @@ in Settings) and — at the next lock — hyprlock.
 
 ### Desktop widgets
 
-Drawn by nothing-shell on the wallpaper (under windows): **Weather** (sky gradient for the
-current condition and time of day, H/L), **Clock** (analog, orange second hand),
-**Calendar** (weekday in red, month grid) and **System** (CPU / memory / disk as activity
-rings, CPU/GPU/SSD temperatures).
+Drawn by nothing-shell on the wallpaper (under windows), each **small** or **medium**:
+
+| Widget | Shows | Click |
+|---|---|---|
+| **Weather** | sky gradient for the condition and time of day, H/L; medium: 3-day forecast | island panel (forecast, calendar) |
+| **Clock** | analog (orange second hand) or digital; medium: both | analog ↔ digital |
+| **Calendar** | weekday in red, date; medium: month grid | island panel (calendar) |
+| **System** | CPU / memory / disk activity rings; medium: values + temperatures | Control Center |
+
+- **Move**: drag a widget anywhere (snaps to a 4 px grid; the layout is saved).
+- **Right-click a widget**: Small / Medium, Analog / Digital, Remove, Add Widget, Edit Widgets,
+  Reset. **Right-click the desktop**: Add Widget, Edit Widgets, Reset, Change Wallpaper.
+- **Edit Widgets**: remove badges on every widget plus **Add Widget** / **Done** buttons;
+  click the empty desktop to finish. Several widgets of one kind are fine (up to 24).
+- **Settings → Appearance → Desktop widgets**: a switch per kind, *Edit Widgets*, *Reset*.
+- **Terminal**: `nothing-shell widgets list | types | add TYPE [small|medium] | remove ID|TYPE
+  | edit | done | reset`.
+- The layout is `~/.config/nothing/widgets.json` (per machine, 0600). It's validated on load:
+  unknown types, sizes or options are dropped, positions clamped, and a broken file falls back
+  to the default layout.
 
 ### The dynamic island (top centre)
 
@@ -410,6 +427,35 @@ Before suspend, hypridle locks first and holds a sleep inhibitor until hyprlock 
 Scripts poke Waybar instead of polling fast: `pkill -RTMIN+8 waybar` refreshes the recording
 dot, `-RTMIN+9` the notification bell.
 
+### Security & privacy
+
+What the desktop does to keep your data yours:
+
+- **No secrets on command lines.** Wi-Fi passwords go to `nmcli --ask` on stdin; argv is
+  readable by every local user (`ps`, `/proc/<pid>/cmdline`).
+- **Owner-only state.** nothing-shell's control socket is `0600` in the `0700`
+  `$XDG_RUNTIME_DIR` and checks the caller's UID (`SO_PEERCRED`); requests are size-capped.
+  `~/.config/nothing/` (Hyprland executes the generated `settings.lua`), notification history,
+  clipboard history, the widget layout and the weather cache are `0600`/`0700` — files are
+  written atomically through private temp files, and `install.sh` re-applies the modes.
+- **No injection through generated config.** Strings written into Lua (`settings.lua`,
+  `hyprctl eval`) escape quotes, backslashes and every control character; wallpaper paths are
+  checked before they go into hyprpaper's config; the auto-rotate state lives in the runtime
+  dir (never `/tmp`) and only accepts connector names. Notification text, SSIDs and weather
+  data are rendered as plain text, never as markup.
+- **Validated input.** `widgets.json` and every `nothing-shell` / `nothing-theme` argument are
+  checked against fixed lists before anything happens.
+- **Privacy on screen.** The menu bar never shows the focused app or title; the lock screen
+  shows no media or notifications; history lives only in the Control Center.
+- **Clipboard.** `cliphist` keeps at most 200 entries and skips anything a password manager
+  marks as secret (`CLIPBOARD_STATE=sensitive`); *Clear Clipboard History* is in the Tux menu.
+- **Locking.** One lock path (`loginctl lock-session` → hypridle → hyprlock), locked before
+  suspend; with the auto-login screen Hyprland starts *already locked* (`--locked-cmd`), and if
+  hyprlock ever dies the session stays locked (`allow_session_lock_restore`).
+- **Network.** The only outside request is the weather (HTTPS to wttr.in, IP-based unless
+  `NOTHING_WEATHER_LOCATION` is set). Nothing is downloaded and executed at install time
+  besides the distribution / AUR packages you confirm.
+
 ### Files outside the repo
 
 | Path | What |
@@ -425,6 +471,7 @@ dot, `-RTMIN+9` the notification bell.
 | `~/.config/fontconfig/` | symlink to `fontconfig/` — SF Pro → Inter, SF Mono → JetBrains Mono fallbacks |
 | `~/.local/share/fonts/SF-Pro/` | Apple's SF fonts, unpacked by `scripts/install-sf-fonts.sh` |
 | `hypr/theme` | the active mode (git-ignored link → `themes/mac-dark` or `themes/mac-light`) |
+| `~/.config/nothing/widgets.json` | desktop widget layout (0600) |
 | `~/.config-backup/<timestamp>/` | your configs from before the first install |
 
 ---

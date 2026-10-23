@@ -6,7 +6,20 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- Wi-Fi passwords are passed to nmcli on stdin, no longer on the command line.
+- nothing-shell's socket is 0600 and checks the peer UID; requests are size-capped.
+- Settings, notification history, clipboard history, widget layout and weather cache are
+  written owner-only through private temp files; install.sh tightens existing ones.
+- Lua serialisation escapes all control characters; wallpaper paths are validated before
+  they reach hyprpaper; autorotate no longer falls back to /tmp and validates its state.
+- clipboard history capped at 200 entries (password-manager clips are never stored).
+- The lock screen no longer shows the playing media; the menu bar no longer shows the focused
+  app or window title.
+
 ### Changed — macOS redesign
+- Menu bar: Tux replaces the Apple logo; the time sits in the centre next to the workspace
+  dots, the date on the right; neutral now-playing indicator and album-art placeholder.
 - **macOS look** in a **Light** and a **Dark** mode: frosted vibrant glass (Hyprland blur 8×4,
   vibrancy 0.35, explicit `glass-…` layer rules for the bar, island, Control Center, widgets,
   notifications, rofi, dock and `gtk-layer-shell`), Apple system colours, hairline window
@@ -29,6 +42,11 @@ project uses [Semantic Versioning](https://semver.org/).
   wallpapers. `hyprland.lua` is a loader for `hypr/conf/{monitors,autostart,input,look,rules,keybinds}.lua`.
 
 ### Added
+- **Customisable desktop widgets**: drag anywhere, click actions, small / medium sizes, analog
+  / digital clock, add / remove (right-click, Edit Widgets mode with badges, Settings →
+  Appearance, `nothing-shell widgets …`), layout saved per machine in
+  `~/.config/nothing/widgets.json` and validated on load.
+- Tux system menu entry *Clear Clipboard History*.
 - **Settings app** (`Super+I`, launcher entry *Settings*): Network, Bluetooth, Sound, Displays,
   Appearance, Night mode, Notifications, Keyboard & mouse, Power & lock, Login screen,
   Shortcuts, About — all live, with *Install* buttons for missing helpers and a 15 s
