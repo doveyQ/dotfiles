@@ -1,6 +1,7 @@
-/* nothing-shell — Copenhagen: smoky glass, chalk text, muted sage / clay accents.
-   Colours + fonts: ~/.config/hypr/theme/palette.css                                */
+/* nothing-shell — macOS: frosted glass, SF Pro, system blue.
+   Colours: ~/.config/hypr/theme/palette.css (light / dark: nothing-theme toggle)          */
 @import url("../hypr/theme/palette.css");
+@import url("../hypr/themes/typography.css");
 
 * {
   font-size: 13px;
@@ -12,14 +13,14 @@
 window.nothing-layer { background: transparent; }
 
 .dim   { color: @dim; }
-.tiny  { font-size: 10px; font-weight: 600; letter-spacing: 0.4px; }
-.glyph { font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font"; font-size: 16px; }
+.tiny  { font-size: 10px; font-weight: 500; }
+.glyph { font-size: 15px; }
 
 .card {
   background: @card;
   border: 1px solid @line;
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 12px 14px;
 }
 
 /* ── generic buttons ── */
@@ -31,91 +32,86 @@ button {
   padding: 0;
   min-height: 0;
   min-width: 0;
-  transition: all 180ms cubic-bezier(.22, 1, .36, 1);
+  transition: all 0.2s ease-in-out;
 }
 .nbtn.round {
-  min-width: 38px; min-height: 38px;
+  min-width: 34px; min-height: 34px;
   border-radius: 999px;
   background: @card2;
 }
-.nbtn.round:hover  { background: alpha(@fg, 0.16); }
+.nbtn.round:hover  { background: @press; }
 .nbtn.round:active { background: @accent; }
 .nbtn.round:active label { color: @on_accent; }
 .nbtn.round.on, .nbtn.round.play.on { background: @accent; }
 .nbtn.round.on label { color: @on_accent; }
-.nbtn.mini { min-width: 22px; min-height: 22px; border-radius: 999px; }
-.nbtn.mini label { font-size: 12px; color: @dim; }
+.nbtn.mini { min-width: 20px; min-height: 20px; border-radius: 999px; }
+.nbtn.mini label { font-size: 11px; color: @dim; }
 .nbtn.mini:hover { background: @hover; }
 .nbtn.mini:hover label { color: @fg; }
 
 .chip {
   border-radius: 999px;
   background: @card2;
-  padding: 6px 14px;
+  padding: 4px 12px;
   font-size: 11px;
   font-weight: 600;
 }
-.chip:hover { background: alpha(@fg, 0.16); }
+.chip:hover { background: @press; }
 .chip.offline label { color: @alert; }
-.danger-hover:hover { background: alpha(@alert, 0.35); }
+.danger-hover:hover { background: alpha(@red, 0.85); }
+.danger-hover:hover label { color: @on_accent; }
 
 /* ══════════════ ISLAND ══════════════
-   Compact, it is the centre of the top bar: no surface of its own.
-   Expanded, it grows into a frosted card under the bar.                 */
+   Compact: workspace dots in the centre of the menu bar (no surface of its own).
+   Expanded: a frosted panel under the bar.                                     */
 .island {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 16px;
-  padding: 0 14px;
-  min-height: 36px;
+  border-radius: 12px;
+  padding: 0 12px;
+  min-height: 34px;
   transition: border-radius 280ms cubic-bezier(.22, 1, .36, 1),
               background 280ms ease, border-color 280ms ease, padding 280ms ease;
 }
-.island:hover { background: alpha(@fg, 0.04); }
+.island:hover { background: @hover; }
 .island.expanded {
-  border-radius: 26px;
-  padding: 0 18px 18px 18px;
+  border-radius: 22px;
+  padding: 0 16px 16px 16px;
   background: @glass_hi;
   border-color: @line;
+  box-shadow: inset 0 1px 0 @highlight;
 }
-.island-compact { min-height: 36px; }
+.island-compact { min-height: 34px; }
 
-.c-clock {
-  font-size: 14px;
-  font-weight: 600;
-  font-feature-settings: "tnum";
-  padding: 0 4px;
-}
-.c-weather, .c-vol { font-size: 12px; font-weight: 500; color: @dim; }
-.c-vol { color: @accent; }
-.c-night { font-family: "Symbols Nerd Font"; font-size: 13px; color: @sand; }
+.c-vol { font-size: 12px; color: @dim; }
+.c-night { font-size: 12px; color: @orange; }
 
-.rec-dot { color: @alert; font-size: 12px; animation: breathe 1.6s ease-in-out infinite alternate; }
-@keyframes breathe { to { color: alpha(@alert, 0.25); } }
+.rec-dot { color: @red; font-size: 11px; animation: pulse 1.4s ease-in-out infinite alternate; }
+@keyframes pulse { to { color: alpha(@red, 0.3); } }
 
-/* workspace dots → the active one stretches into a sage pill */
+/* workspace dots → the active one stretches into a pill */
 .ws-dot {
-  min-width: 6px; min-height: 6px;
+  min-width: 7px; min-height: 7px;
   border-radius: 999px;
-  background: alpha(@fg, 0.16);
+  background: alpha(@fg, 0.22);
   transition: all 260ms cubic-bezier(.22, 1, .36, 1);
 }
-.ws-dot.occupied { background: alpha(@fg, 0.42); }
-.ws-dot.active   { min-width: 20px; background: @accent; }
-.ws-dot.urgent   { background: @alert; }
-.ws-dot:hover    { background: alpha(@fg, 0.65); }
+.ws-dot.occupied { background: alpha(@fg, 0.5); }
+.ws-dot.active   { min-width: 22px; background: @fg; }
+.ws-dot.urgent   { background: @orange; }
+.ws-dot:hover    { background: alpha(@fg, 0.75); }
 
 /* expanded panel */
 .island-panel { padding-top: 10px; }
-.p-date  { font-size: 12px; font-weight: 600; color: @dim; }
-.p-clock { font-size: 64px; font-weight: 200; letter-spacing: -1px; font-feature-settings: "tnum"; }
+.p-date  { font-size: 13px; font-weight: 600; color: @dim; }
+.p-clock { font-size: 60px; font-weight: 700; font-feature-settings: "tnum"; }
 
-.weather-card { padding: 12px 18px; }
-.w-icon { font-family: "Symbols Nerd Font"; font-size: 40px; min-width: 52px; color: @sand; }
-.w-temp { font-size: 28px; font-weight: 300; }
+.weather-card { padding: 12px 16px; }
+.w-icon { font-size: 38px; min-width: 50px; color: @yellow; }
+.w-temp { font-size: 28px; font-weight: 500; }
 .w-cond { font-size: 12px; font-weight: 600; }
-.w-meta { font-size: 10px; color: @dim; font-weight: 500; }
-.w-day-icon { font-family: "Symbols Nerd Font"; font-size: 18px; color: @sand; }
+.w-meta { font-size: 11px; color: @dim; }
+.w-day-icon { font-size: 17px; color: @yellow; }
 
 /* calendar */
 .cal-card { padding: 10px 12px; }
@@ -131,7 +127,7 @@ calendar.ncal.button:hover { color: @fg; }
 calendar.ncal.highlight { color: @dim; font-weight: 700; font-size: 9px; }
 calendar.ncal:indeterminate { color: @mute; }
 calendar.ncal:selected {
-  background: @accent;
+  background: @red;
   color: @on_accent;
   border-radius: 999px;
   font-weight: 700;
@@ -139,23 +135,24 @@ calendar.ncal:selected {
 
 /* media */
 .media-card { padding: 14px; }
-.m-player { font-size: 10px; font-weight: 600; letter-spacing: 0.6px; color: @dim; }
+.m-player { font-size: 11px; font-weight: 600; color: @dim; }
 .m-player.live { color: @accent; }
-.m-title { font-size: 15px; font-weight: 600; }
+.m-title { font-size: 15px; font-weight: 700; }
 .m-artist { font-size: 12px; }
-.nbtn.round.play { min-width: 44px; min-height: 44px; }
+.nbtn.round.play { min-width: 42px; min-height: 42px; }
 
 /* quick row */
-.quick-row { padding: 10px 14px; border-radius: 999px; }
-.vol-pct { font-size: 15px; font-weight: 500; min-width: 34px; font-feature-settings: "tnum"; }
+.quick-row { padding: 10px 14px; border-radius: 16px; }
+.vol-pct { font-size: 15px; font-weight: 600; min-width: 34px; font-feature-settings: "tnum"; }
 
-scale.nscale trough {
+/* sliders: thin (island) and macOS Control Center thick (.ccscale) */
+scale.nscale trough, scale.ccscale trough {
   min-height: 6px;
   border-radius: 999px;
   background: @track;
   border: none;
 }
-scale.nscale highlight {
+scale.nscale highlight, scale.ccscale highlight {
   border-radius: 999px;
   background: @fg;
   border: none;
@@ -164,61 +161,91 @@ scale.nscale slider {
   min-width: 18px; min-height: 18px;
   margin: -7px;
   border-radius: 999px;
-  background: @fg;
+  background: #ffffff;
   border: none;
   box-shadow: 0 1px 4px alpha(black, 0.35);
-  transition: all 140ms ease;
 }
-scale.nscale slider:hover { background: @sand; }
+scale.ccscale trough   { min-height: 24px; }
+scale.ccscale highlight { background: #ffffff; }
+scale.ccscale slider {
+  min-width: 24px; min-height: 24px;
+  margin: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 0 0 0.5px alpha(black, 0.15), 0 1px 4px alpha(black, 0.3);
+}
 
-/* ══════════════ CONTROL CENTER (quick settings) ══════════════ */
+/* ══════════════ CONTROL CENTER ══════════════ */
 .control {
   background: @glass_hi;
   border: 1px solid @line;
-  border-radius: 24px;
-  padding: 18px;
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 @highlight;
 }
-.red-dot { color: @accent; font-size: 9px; }
-.cc-title { font-size: 17px; font-weight: 600; }
-.stat-key { font-size: 11px; font-weight: 600; color: @dim; }
-.stat-val { font-size: 15px; font-weight: 500; font-feature-settings: "tnum"; }
-.section  { font-size: 11px; font-weight: 600; letter-spacing: 0.4px; color: @dim; }
-
-.temp-tile { padding: 10px 6px; border-radius: 18px; transition: all 300ms ease; }
-.temp-val  { font-size: 26px; font-weight: 300; font-feature-settings: "tnum"; }
-.temp-tile.hot { background: alpha(@alert, 0.20); border-color: alpha(@alert, 0.6); }
-.temp-tile.hot .temp-val { color: @alert; }
-
-.tile {
+.cc-module {
   background: @card;
   border: 1px solid @line;
-  border-radius: 18px;
-  padding: 12px 0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: inset 0 1px 0 @highlight;
 }
-.tile .tiny { font-size: 9px; letter-spacing: 0.2px; }
-.tile:hover { background: @card2; }
-.tile.on { background: @accent; border-color: transparent; }
-.tile.on label { color: @on_accent; }
+.cc-square { padding: 10px 6px; }
+.cc-name { font-size: 13px; font-weight: 600; }
+.cc-sub  { font-size: 11px; color: @dim; }
 
-.notif { padding: 10px 12px 10px 16px; border-radius: 16px; }
-.n-app { font-size: 10px; font-weight: 600; letter-spacing: 0.4px; color: @dim; }
-.n-sum { font-weight: 600; font-size: 13px; }
-.n-body { font-size: 12px; color: alpha(@fg, 0.85); }
-.empty { padding: 14px; }
-.empty-dots { font-size: 22px; color: @mute; letter-spacing: 6px; }
+.cc-circle {
+  min-width: 30px; min-height: 30px;
+  border-radius: 999px;
+  background: @card2;
+}
+.cc-circle label { font-size: 14px; color: @fg; }
+.cc-circle:hover { background: @press; }
+.cc-circle.on { background: @accent; }
+.cc-circle.on label { color: @on_accent; }
+
+.stat-val { font-size: 13px; font-weight: 600; color: @dim; font-feature-settings: "tnum"; }
+.section  { font-size: 13px; font-weight: 600; padding: 2px 4px 0 4px; }
+
+.temp-tile {
+  padding: 6px 4px;
+  border-radius: 12px;
+  background: @card2;
+  transition: all 300ms ease;
+}
+.temp-val { font-size: 18px; font-weight: 600; font-feature-settings: "tnum"; }
+.temp-tile.hot { background: alpha(@orange, 0.25); }
+.temp-tile.hot .temp-val { color: @orange; }
+
+/* notifications — Notification Center cards */
+.notif {
+  padding: 10px 12px 10px 14px;
+  border-radius: 16px;
+  background: @card;
+  border: 1px solid @line;
+  box-shadow: inset 0 1px 0 @highlight;
+}
+.n-app { font-size: 11px; font-weight: 600; color: @dim; }
+.n-sum { font-weight: 700; font-size: 13px; }
+.n-body { font-size: 12px; color: @fg; }
+.empty { padding: 12px; }
+.empty-dots { font-size: 18px; color: @mute; letter-spacing: 4px; }
 
 scrollbar { background: transparent; border: none; }
-scrollbar slider { min-width: 3px; background: alpha(@fg, 0.2); border-radius: 99px; border: none; }
+scrollbar slider { min-width: 3px; background: alpha(@fg, 0.25); border-radius: 99px; border: none; }
 
-.power-btn {
-  background: @card;
-  border: 1px solid @line;
-  border-radius: 18px;
-  padding: 10px 2px;
+/* power row: round buttons */
+.power-btn { background: transparent; border: none; padding: 2px 0; }
+.power-circle {
+  min-width: 34px; min-height: 34px;
+  border-radius: 999px;
+  background: @card2;
+  font-size: 14px;
 }
-.power-btn:hover { background: @card2; }
-.power-btn.confirm { background: @alert; border-color: transparent; }
-.power-btn.confirm label { color: @on_accent; }
+.power-btn:hover .power-circle { background: @press; }
+.power-btn.confirm .power-circle { background: @red; color: @on_accent; }
+.power-btn.confirm label.tiny { color: @red; }
 
-tooltip { background: @glass_hi; border: 1px solid @line; border-radius: 10px; }
+tooltip { background: @glass_hi; border: 1px solid @line; border-radius: 8px; }
 tooltip label { color: @fg; font-size: 11px; }

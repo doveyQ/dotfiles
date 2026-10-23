@@ -1,5 +1,5 @@
-/* Launcher — Spotlight-like smoky glass card, soft rows
-   Colours + fonts: ~/.config/hypr/theme/palette.rasi                    */
+/* Launcher — Spotlight: one frosted glass panel, large search field, compact rows
+   Colours + fonts: ~/.config/hypr/theme/palette.rasi (light / dark)             */
 @import "~/.config/hypr/theme/palette.rasi"
 
 configuration {
@@ -25,33 +25,34 @@ configuration {
 }
 
 window {
-  width: 600px;
-  border: 1px; border-color: @line; border-radius: 22px;
+  width: 680px;
+  border: 1px; border-color: @line; border-radius: 16px;
   background-color: @glass;
-  padding: 16px;
+  padding: 8px;
   location: north;
-  y-offset: 120px;
+  y-offset: 180px;
 }
-mainbox  { spacing: 12px; children: [ inputbar, mode-switcher, listview ]; }
+mainbox  { spacing: 6px; children: [ inputbar, mode-switcher, listview ]; }
 
 inputbar {
-  background-color: @card;
-  border-radius: 14px;
-  padding: 12px 18px;
+  padding: 10px 12px;
   spacing: 12px;
+  border: 0 0 1px 0; border-color: @line;
   children: [ textbox-icon, entry ];
 }
-textbox-icon  { content: "⌕"; text-color: @dim; expand: false; vertical-align: 0.5; }
+textbox-icon  { content: "⌕"; font: @font-search; text-color: @dim; expand: false; vertical-align: 0.5; }
 entry {
-  placeholder: "Search";
+  placeholder: "Spotlight Search";
   placeholder-color: @mute;
+  font: @font-search;
   cursor: text;
+  vertical-align: 0.5;
 }
 
 mode-switcher { spacing: 8px; enabled: false; }
 button {
-  padding: 6px 14px;
-  border-radius: 10px;
+  padding: 5px 12px;
+  border-radius: 8px;
   background-color: @card;
   text-color: @dim;
   font: @font-ui-sm;
@@ -59,22 +60,24 @@ button {
 button selected { background-color: @accent; text-color: @on-accent; }
 
 listview {
-  lines: 7; columns: 1;
-  spacing: 2px;
+  lines: 8; columns: 1;
+  spacing: 1px;
   scrollbar: false;
-  fixed-height: true;
+  fixed-height: false;
+  dynamic: true;
   cycle: true;
+  padding: 4px 0 0 0;
 }
 element {
-  padding: 9px 14px;
-  border-radius: 12px;
-  spacing: 14px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  spacing: 12px;
   cursor: pointer;
 }
 element normal.normal, element alternate.normal { background-color: transparent; }
-element selected.normal { background-color: @card2; text-color: @fg; }
-element-icon { size: 24px; cursor: inherit; }
+element selected.normal { background-color: @accent; text-color: @on-accent; }
+element-icon { size: 26px; cursor: inherit; }
 element-text { text-color: inherit; vertical-align: 0.5; cursor: inherit; }
 
-message  { padding: 10px 16px; border-radius: 14px; background-color: @card; }
+message  { padding: 8px 12px; border-radius: 10px; background-color: @card; }
 textbox  { text-color: @dim; }

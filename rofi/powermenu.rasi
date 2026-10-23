@@ -1,4 +1,4 @@
-/* Session menu — full-screen warm scrim, five frosted tiles
+/* Session menu — full-screen dim, five frosted tiles
    Colours + fonts: ~/.config/hypr/theme/palette.rasi          */
 @import "~/.config/hypr/theme/palette.rasi"
 
@@ -41,7 +41,7 @@ listview {
 element {
   orientation: vertical;
   padding: 26px 0 22px 0;
-  border: 1px; border-color: @line; border-radius: 22px;
+  border: 1px; border-color: @line; border-radius: 20px;
   background-color: @glass;
   cursor: pointer;
 }
@@ -50,7 +50,7 @@ element-text {
   text-color: inherit;
   cursor: inherit;
 }
-element selected.normal { background-color: @card2; text-color: @fg; border-color: @line; }
+element selected.normal { background-color: @accent; text-color: @on-accent; border-color: transparent; }
 element selected.urgent { background-color: @alert; text-color: @on-accent; border-color: @alert; }
 element normal.urgent   { text-color: @fg; }
 textbox-hint {

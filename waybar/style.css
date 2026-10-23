@@ -1,7 +1,8 @@
-/* Copenhagen — one continuous floating glass bar.
-   Colours + fonts: ~/.config/hypr/theme/palette.css (switch themes there, not here).
-   The blur behind the bar is Hyprland's (layer rule "glass-waybar"; GTK can't blur). */
+/* macOS menu bar — one continuous frosted-glass bar.
+   Colours: ~/.config/hypr/theme/palette.css (light / dark: nothing-theme toggle)
+   The blur + vibrancy behind it is Hyprland's (layer rule "glass-waybar"). */
 @import url("../hypr/theme/palette.css");
+@import url("../hypr/themes/typography.css");
 
 * {
   font-size: 13px;
@@ -13,56 +14,54 @@
   text-shadow: none;
 }
 
-/* the bar itself is the single surface */
 window#waybar {
   background: @glass;
   border: 1px solid @line;
-  border-radius: 16px;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 @highlight;
   color: @fg;
-  transition: background 240ms ease;
+  transition: background 200ms ease-in-out;
 }
-window#waybar.empty, window#waybar.fullscreen { background: @glass_hi; }
 
 tooltip {
   background: @glass_hi;
   border: 1px solid @line;
-  border-radius: 12px;
-}
-tooltip label { color: @fg; padding: 4px 6px; }
-
-/* every item is a soft hover target inside the bar — no separate pills */
-#custom-logo, #custom-more, #tray, #cpu, #memory, #network, #custom-clipboard,
-#battery, #custom-notification, #custom-quick, #custom-power {
-  color: @fg;
-  padding: 0 9px;
-  margin: 5px 1px;
   border-radius: 10px;
-  transition: background 180ms ease, color 180ms ease;
 }
-#custom-logo:hover, #custom-more:hover, #cpu:hover, #memory:hover, #network:hover,
-#custom-clipboard:hover, #battery:hover, #custom-notification:hover,
-#custom-quick:hover, #custom-power:hover { background: @hover; }
+tooltip label { color: @fg; padding: 3px 5px; }
 
-/* ── left ── */
-#custom-logo {
-  font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font";
-  font-size: 16px;
-  margin-left: 6px;
-  padding: 0 10px;
+/* every item: a soft rounded hover target, like macOS menu extras */
+#custom-apple, #window, #custom-more, #tray, #cpu, #memory, #network, #bluetooth,
+#battery, #custom-clipboard, #custom-quick, #custom-clock {
+  color: @fg;
+  padding: 0 8px;
+  margin: 4px 1px;
+  border-radius: 7px;
+  transition: all 0.2s ease-in-out;
 }
+#custom-apple:hover, #custom-more:hover, #cpu:hover, #memory:hover, #network:hover,
+#bluetooth:hover, #battery:hover, #custom-clipboard:hover, #custom-quick:hover,
+#custom-clock:hover { background: @hover; }
+#custom-apple:active, #custom-quick:active, #custom-clock:active { background: @press; }
+
+/* ── left: Apple menu · app name · title ── */
+#custom-apple {
+  font-size: 16px;
+  padding: 0 11px 0 12px;
+  margin-left: 4px;
+}
+#window { padding: 0 6px; margin: 4px 0; }
+window#waybar.empty #window { padding: 0; }
+#window.app label, #window.app { font-weight: 700; }
+#window:not(.app) { color: @dim; font-weight: 400; }
 
 /* ── right ── */
-#system { padding: 0 6px 0 4px; }
+#system { padding: 0 2px; }
+#network, #bluetooth, #custom-clipboard, #custom-quick, #custom-more { font-size: 15px; }
+#custom-more { color: @dim; }
+#network.disconnected, #bluetooth.off, #bluetooth.disabled { color: @dim; }
+#bluetooth.connected { color: @accent; }
 
-#network, #custom-clipboard, #custom-notification,
-#custom-quick, #custom-power, #custom-more { font-size: 15px; }
-#custom-more { color: @mute; }
-#custom-quick, #custom-power { color: @dim; }
-#custom-quick:hover, #custom-power:hover { color: @fg; }
-#network.disconnected { color: @mute; }
-#custom-notification.dnd { color: @mute; }
-
-/* drawer children: quieter, numbers don't jitter */
 .drawer-child { color: @dim; }
 #cpu, #memory, #network.speed, #battery {
   font-feature-settings: "tnum";
@@ -70,22 +69,31 @@ tooltip label { color: @fg; padding: 4px 6px; }
 }
 #network.speed {
   color: @dim;
-  min-width: 150px;
+  min-width: 148px;
   padding: 0 6px;
 }
 #network.speed.disconnected { min-width: 0; padding: 0; }
 #tray { padding: 0 6px; }
 #tray > .needs-attention { -gtk-icon-effect: highlight; }
 
+#battery.charging, #battery.plugged { color: @green; }
 #battery.warning:not(.charging)  { color: @warn; }
 #battery.critical:not(.charging) { color: @alert; }
 
-/* ── recording dot (clay, gently breathing) ── */
+/* date & time, bold like the macOS menu-bar clock */
+#custom-clock {
+  font-weight: 700;
+  font-feature-settings: "tnum";
+  padding: 0 12px;
+  margin-right: 4px;
+}
+
+/* recording: pulsing red dot */
 #custom-record { padding: 0; }
 #custom-record.recording {
-  color: @alert;
-  font-size: 13px;
-  padding: 0 8px 0 4px;
-  animation: breathe 1.6s ease-in-out infinite alternate;
+  color: @red;
+  font-size: 12px;
+  padding: 0 6px 0 4px;
+  animation: pulse 1.4s ease-in-out infinite alternate;
 }
-@keyframes breathe { to { color: alpha(@alert, 0.25); } }
+@keyframes pulse { to { color: alpha(@red, 0.3); } }

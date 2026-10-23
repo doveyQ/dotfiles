@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""nothing-shell — Nothing OS dynamic island + control center for Hyprland.
+"""nothing-shell — macOS-style shell surfaces for Hyprland.
 
 A single GTK3 layer-shell daemon providing:
-  • island   – compact pill (workspaces · weather · clock) that morphs into a
+  • island   – workspace dots in the centre of the menu bar that morph into a
                panel on hover: clock, weather, calendar, MPRIS media, volume,
                network / bluetooth toggles.
-  • control  – right-hand control center: live dot-matrix CPU graph, RAM,
-               thermals, quick toggles, notification history, power actions.
+  • control  – Control Center: Wi-Fi / Bluetooth / Mic, Focus, Night Shift,
+               Light/Dark, sound, live CPU / memory / thermals, notifications, power.
+  • widgets  – macOS desktop widgets on the wallpaper: Weather, Clock,
+               Calendar and System (activity rings).
 
 Usage:
   nothing-shell                      start the daemon (single instance)
@@ -14,6 +16,7 @@ Usage:
   nothing-shell control toggle|open|close
   nothing-shell notif-status         JSON for the waybar bell
   nothing-shell notif-clear          clear notification history
+  nothing-shell reload-css           re-read style.css and the theme palette (light / dark)
   nothing-shell quit
 """
 import json
@@ -43,26 +46,47 @@ WORKSPACES = range(1, int(os.environ.get("NOTHING_WORKSPACES", "10")) + 1)
 PALETTE_FILE = os.path.join(HOME, ".config", "hypr", "theme", "palette.css")
 
 
-def palette(name, default):
-    """A #rrggbb colour from the active theme's palette.css (for Pango markup and cairo)."""
+def palette_value(name):
+    """Raw value of `@define-color <name>` in the active theme's palette.css, aliases followed."""
     try:
         with open(PALETTE_FILE) as f:
             css = f.read()
     except OSError:
-        return default
-    for _ in range(4):   # follow aliases like `@define-color accent @sage;`
+        return None
+    for _ in range(4):   # follow aliases like `@define-color accent @blue;`
         m = re.search(r"@define-color\s+" + re.escape(name) + r"\s+([^;]+);", css)
         if not m:
-            return default
+            return None
         value = m.group(1).strip()
         if not value.startswith("@"):
-            return value if re.fullmatch(r"#[0-9a-fA-F]{6}", value) else default
+            return value
         name = value[1:]
-    return default
+    return None
+
+
+def palette(name, default):
+    """A #rrggbb colour from the palette (for Pango markup)."""
+    v = palette_value(name)
+    return v if v and re.fullmatch(r"#[0-9a-fA-F]{6}", v) else default
 
 
 def rgb(hexcolor):
     return tuple(int(hexcolor[i:i + 2], 16) / 255 for i in (1, 3, 5))
+
+
+def parse_color(v):
+    """#rrggbb or rgba(r, g, b, a) → (r, g, b, a) floats, or None."""
+    if v and re.fullmatch(r"#[0-9a-fA-F]{6}", v):
+        return rgb(v) + (1.0,)
+    m = re.fullmatch(r"rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)", v or "")
+    if not m:
+        return None
+    return tuple(float(m.group(i)) / 255 for i in (1, 2, 3)) + (float(m.group(4) or 1),)
+
+
+def rgba(name, default):
+    """A palette colour as (r, g, b, a) floats, for cairo."""
+    return parse_color(palette_value(name)) or parse_color(default)
 
 
 # ───────────────────────────── client mode ─────────────────────────────
@@ -97,13 +121,15 @@ if send("ping") == "pong":
     sys.exit(0)
 
 # ───────────────────────────── daemon ─────────────────────────────
+import cairo  # noqa: E402
 import gi  # noqa: E402
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GtkLayerShell", "0.1")
 gi.require_version("Playerctl", "2.0")
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, GtkLayerShell, Pango, Playerctl  # noqa: E402
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, GtkLayerShell, Pango, PangoCairo, Playerctl  # noqa: E402
 
 os.makedirs(os.path.join(CACHE, "art"), exist_ok=True)
 
@@ -268,7 +294,7 @@ class Sys:
     def uptime():
         s = int(float(open("/proc/uptime").read().split()[0]))
         d, h, m = s // 86400, s % 86400 // 3600, s % 3600 // 60
-        return f"UP {d}D {h}H" if d else f"UP {h}H {m:02d}M"
+        return f"Up {d} d {h} h" if d else f"Up {h} h {m} min"
 
     @staticmethod
     def volume():
@@ -327,6 +353,14 @@ class Sys:
             return False
 
     @staticmethod
+    def dark():
+        """The active theme (nothing-theme): mac-dark → True, mac-light → False."""
+        try:
+            return not os.readlink(os.path.join(HOME, ".config", "hypr", "theme")).rstrip("/").endswith("light")
+        except OSError:
+            return True
+
+    @staticmethod
     def recording():
         return run(["pgrep", "-x", "wf-recorder"]) != ""
 
@@ -341,13 +375,36 @@ WEATHER_ICONS = {
 }
 
 
+# English names regardless of LC_TIME, like the menu-bar clock
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DAY_ABBR = [d[:3] for d in DAY_NAMES]
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August",
+               "September", "October", "November", "December"]
+
+
+def date_long(t=None):
+    t = t or time.localtime()
+    return f"{DAY_NAMES[t.tm_wday]}, {t.tm_mday} {MONTH_NAMES[t.tm_mon - 1]}"
+
+
 def weather():
     try:
         with open(WEATHER_CACHE) as f:
             d = json.load(f)
         cur, days = d["current_condition"][0], d["weather"]
         area = d.get("nearest_area", [{}])[0].get("areaName", [{}])[0].get("value", "")
+        try:   # day / night from today's sunrise & sunset (local time)
+            astro = days[0]["astronomy"][0]
+            now = time.strftime("%H:%M")
+            to24 = lambda t: time.strftime("%H:%M", time.strptime(t, "%I:%M %p"))  # noqa: E731
+            is_day = to24(astro["sunrise"]) <= now < to24(astro["sunset"])
+        except (KeyError, IndexError, ValueError):
+            is_day = 7 <= time.localtime().tm_hour < 19
         return {
+            "code": cur["weatherCode"],
+            "is_day": is_day,
+            "hi": f'{days[0]["maxtempC"]}°',
+            "lo": f'{days[0]["mintempC"]}°',
             "icon": WEATHER_ICONS.get(cur["weatherCode"], "󰖐"),
             "temp": f'{cur["temp_C"]}°',
             "cond": cur["weatherDesc"][0]["value"].strip(),
@@ -355,7 +412,7 @@ def weather():
             "hum": f'{cur["humidity"]}%',
             "wind": f'{cur["windspeedKmph"]} km/h',
             "area": area,
-            "days": [(time.strftime("%a", time.strptime(x["date"], "%Y-%m-%d")),
+            "days": [(DAY_ABBR[time.strptime(x["date"], "%Y-%m-%d").tm_wday],
                       WEATHER_ICONS.get(x["hourly"][4]["weatherCode"], "󰖐"),
                       x["maxtempC"], x["mintempC"]) for x in days[:3]],
         }
@@ -363,51 +420,104 @@ def weather():
         return None
 
 
-# ───────────── dot-matrix drawing ─────────────
-# colours from the theme's palette.css: lit dots, unlit dots, and the accent "head" dot
-FG = rgb(palette("fg", "#e9e4da"))
-BASE = rgb(palette("base", "#1e1c1a"))
-DIM = tuple(b + (f - b) * 0.12 for b, f in zip(BASE, FG))
-MID = tuple(b + (f - b) * 0.25 for b, f in zip(BASE, FG))
-HEAD = rgb(palette("accent", "#9dad94"))
+# ───────────── drawing (cairo) ─────────────
+# Colours for everything drawn by hand; CSS widgets get theirs from palette.css directly.
+# Re-read on `reload-css`, which nothing-theme sends after switching light / dark.
+COL = {}
+COLOR_DEFAULTS = {
+    "fg": "#f5f5f7", "dim": "#a1a1a6", "mute": "#636366", "base": "#1e1e1e",
+    "glass": "rgba(30, 30, 32, 0.55)", "line": "rgba(255, 255, 255, 0.12)",
+    "highlight": "rgba(255, 255, 255, 0.10)", "track": "rgba(255, 255, 255, 0.16)",
+    "accent": "#0a84ff", "blue": "#0a84ff", "green": "#30d158", "orange": "#ff9f0a",
+    "red": "#ff453a", "indigo": "#5e5ce6", "yellow": "#ffd60a", "pink": "#ff375f",
+    "teal": "#64d2ff", "purple": "#bf5af2",
+}
 
 
-class DotGraph(Gtk.DrawingArea):
-    """History graph rendered as a matrix of dots, newest column on the right (accent)."""
+def load_colors():
+    for name, default in COLOR_DEFAULTS.items():
+        COL[name] = rgba(name, default)
+    COL["dark"] = sum(COL["base"][:3]) < 1.5
 
-    def __init__(self, cols=34, rows=7, dot=7, gap=3.6):
+
+load_colors()
+
+
+def rounded_rect(cr, x, y, w, h, r):
+    r = max(0, min(r, w / 2, h / 2))
+    cr.new_sub_path()
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+    cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+    cr.close_path()
+
+
+def draw_text(cr, s, font, x, y, color, align="left", alpha=1.0, width=None):
+    """Pango text at (x, y) = top-left (or top-centre / top-right). Returns (w, h)."""
+    layout = PangoCairo.create_layout(cr)
+    layout.set_font_description(Pango.FontDescription.from_string(font))
+    if width:
+        layout.set_width(int(width * Pango.SCALE))
+        layout.set_ellipsize(Pango.EllipsizeMode.END)
+    layout.set_text(s, -1)
+    w, h = layout.get_pixel_size()
+    if align == "center":
+        x -= w / 2
+    elif align == "right":
+        x -= w
+    cr.move_to(x, y)
+    cr.set_source_rgba(color[0], color[1], color[2], (color[3] if len(color) > 3 else 1) * alpha)
+    PangoCairo.show_layout(cr, layout)
+    return w, h
+
+
+def set_rgba(cr, color, alpha=1.0):
+    cr.set_source_rgba(color[0], color[1], color[2], (color[3] if len(color) > 3 else 1) * alpha)
+
+
+class LineGraph(Gtk.DrawingArea):
+    """History as a smooth line with a gradient fill (Activity Monitor style)."""
+
+    def __init__(self, n=40, width=300, height=46, color="accent"):
         super().__init__()
-        self.cols, self.rows, self.dot, self.gap = cols, rows, dot, gap
-        self.values = [0.0] * cols
-        self.set_size_request(int(cols * (dot + gap)), int(rows * (dot + gap)))
+        self.values, self.color = [0.0] * n, color
+        self.set_size_request(width, height)
         self.connect("draw", self._draw)
 
-    def push(self, v):
-        self.values = (self.values + [v])[-self.cols:]
-        self.queue_draw()
-
     def _draw(self, _w, cr):
-        step = self.dot + self.gap
-        r = self.dot / 2
-        for c, v in enumerate(self.values):
-            lit = round(v / 100 * self.rows)
-            if v > 0.5 and lit == 0:
-                lit = 1
-            for row in range(self.rows):
-                on = (self.rows - row) <= lit
-                col = (HEAD if c == self.cols - 1 else FG) if on else DIM
-                cr.set_source_rgb(*col)
-                cr.arc(c * step + r, row * step + r, r, 0, 2 * math.pi)
-                cr.fill()
+        W, H = self.get_allocated_width(), self.get_allocated_height()
+        c = COL[self.color]
+        n = len(self.values)
+        pts = [(i * W / (n - 1), H - 2 - (H - 6) * min(v, 100) / 100) for i, v in enumerate(self.values)]
+        cr.move_to(*pts[0])
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            mx = (x0 + x1) / 2
+            cr.curve_to(mx, y0, mx, y1, x1, y1)
+        path = cr.copy_path()
+        cr.line_to(W, H)
+        cr.line_to(0, H)
+        cr.close_path()
+        grad = cairo.LinearGradient(0, 0, 0, H)
+        grad.add_color_stop_rgba(0, c[0], c[1], c[2], 0.45)
+        grad.add_color_stop_rgba(1, c[0], c[1], c[2], 0.02)
+        cr.set_source(grad)
+        cr.fill()
+        cr.append_path(path)
+        cr.set_line_width(2)
+        cr.set_line_join(cairo.LINE_JOIN_ROUND)
+        set_rgba(cr, c)
+        cr.stroke()
 
 
-class DotBar(Gtk.DrawingArea):
-    """Single-row progress bar made of dots; optional accent head."""
+class Bar(Gtk.DrawingArea):
+    """Rounded progress bar: track + gradient fill."""
 
-    def __init__(self, n=26, dot=7, gap=4, head=True):
+    def __init__(self, width=300, height=6, color="accent", color2=None):
         super().__init__()
-        self.n, self.dot, self.gap, self.head, self.value = n, dot, gap, head, 0.0
-        self.set_size_request(int(n * (dot + gap)), dot + 2)
+        self.value, self.color, self.color2 = 0.0, color, color2
+        self.set_size_request(width, height)
+        self.set_valign(Gtk.Align.CENTER)
         self.connect("draw", self._draw)
 
     def set_value(self, v):
@@ -415,23 +525,27 @@ class DotBar(Gtk.DrawingArea):
         self.queue_draw()
 
     def _draw(self, _w, cr):
-        lit = round(self.value / 100 * self.n)
-        r = self.dot / 2
-        for i in range(self.n):
-            if i < lit:
-                cr.set_source_rgb(*(HEAD if self.head and i == lit - 1 else FG))
-            else:
-                cr.set_source_rgb(*DIM)
-            cr.arc(i * (self.dot + self.gap) + r, r + 1, r, 0, 2 * math.pi)
+        W, H = self.get_allocated_width(), self.get_allocated_height()
+        rounded_rect(cr, 0, 0, W, H, H / 2)
+        set_rgba(cr, COL["track"])
+        cr.fill()
+        fw = max(H, W * self.value / 100) if self.value > 0 else 0
+        if fw:
+            a, b = COL[self.color], COL[self.color2 or self.color]
+            grad = cairo.LinearGradient(0, 0, fw, 0)
+            grad.add_color_stop_rgba(0, a[0], a[1], a[2], 1)
+            grad.add_color_stop_rgba(1, b[0], b[1], b[2], 1)
+            rounded_rect(cr, 0, 0, fw, H, H / 2)
+            cr.set_source(grad)
             cr.fill()
 
 
-class DotEq(Gtk.DrawingArea):
-    """Tiny animated dot equalizer shown in the compact island while media plays."""
+class EqBars(Gtk.DrawingArea):
+    """Tiny animated equalizer shown next to the workspace dots while media plays."""
 
     def __init__(self):
         super().__init__()
-        self.set_size_request(17, 16)
+        self.set_size_request(14, 12)
         self.set_valign(Gtk.Align.CENTER)   # don't stretch to the pill's full height
         self.phase = 0.0
         self.playing = False
@@ -442,7 +556,7 @@ class DotEq(Gtk.DrawingArea):
         self.playing = playing
         self.set_visible(playing)
         if playing and not self._tick:
-            self._tick = GLib.timeout_add(110, self._step)
+            self._tick = GLib.timeout_add(90, self._step)
 
     def _step(self):
         if not self.playing or not self.get_mapped():
@@ -453,19 +567,16 @@ class DotEq(Gtk.DrawingArea):
         return True
 
     def _draw(self, _w, cr):
+        H = self.get_allocated_height()
+        set_rgba(cr, COL["accent"])
         for c in range(3):
-            h = 1 + int(3.5 * (0.5 + 0.5 * math.sin(self.phase * (0.9 + c * 0.45) + c * 1.7)))
-            for row in range(4):
-                if 4 - row <= h:
-                    cr.set_source_rgb(*(HEAD if c == 1 and 4 - row == h else FG))
-                else:
-                    cr.set_source_rgb(*MID)
-                cr.arc(c * 6 + 2.5, row * 4 + 2, 1.5, 0, 2 * math.pi)
-                cr.fill()
+            h = 3 + (H - 3) * (0.5 + 0.5 * math.sin(self.phase * (0.5 + c * 0.23) + c * 1.9))
+            rounded_rect(cr, c * 5, H - h, 3, h, 1.5)
+            cr.fill()
 
 
 class RoundedArt(Gtk.DrawingArea):
-    """Album art with rounded corners; dot-matrix placeholder when missing."""
+    """Album art with rounded corners; a colourful note placeholder when missing."""
 
     def __init__(self, size=92, radius=18):
         super().__init__()
@@ -481,30 +592,20 @@ class RoundedArt(Gtk.DrawingArea):
         self.queue_draw()
 
     def _draw(self, _w, cr):
-        s, r = self.size, self.radius
-        cr.new_sub_path()
-        cr.arc(s - r, r, r, -math.pi / 2, 0)
-        cr.arc(s - r, s - r, r, 0, math.pi / 2)
-        cr.arc(r, s - r, r, math.pi / 2, math.pi)
-        cr.arc(r, r, r, math.pi, 3 * math.pi / 2)
-        cr.close_path()
+        s = self.size
+        rounded_rect(cr, 0, 0, s, s, self.radius)
         cr.clip()
         if self.pix:
             Gdk.cairo_set_source_pixbuf(cr, self.pix, 0, 0)
             cr.paint()
             return
-        cr.set_source_rgb(*rgb(palette("base", "#1e1c1a")))
+        a, b = COL["pink"], COL["indigo"]
+        grad = cairo.LinearGradient(0, 0, s, s)
+        grad.add_color_stop_rgb(0, *a[:3])
+        grad.add_color_stop_rgb(1, *b[:3])
+        cr.set_source(grad)
         cr.paint()
-        fg = rgb(palette("fg", "#e9e4da"))
-        n = 7
-        step = s / (n + 1)
-        for i in range(n):
-            for j in range(n):
-                d = math.hypot(i - 3, j - 3)
-                if d < 3.2:
-                    cr.set_source_rgba(*fg, 0.10 + 0.4 * (1 - d / 3.2))
-                    cr.arc(step * (i + 1), step * (j + 1), 2.2, 0, 2 * math.pi)
-                    cr.fill()
+        draw_text(cr, "\U000f075a", f"Symbols Nerd Font {int(s * 0.3)}", s / 2, s * 0.28, (1, 1, 1, 0.92), "center")
 
 
 # ───────────── layer-shell base ─────────────
@@ -542,8 +643,8 @@ class Island(LayerWindow):
     def __init__(self, shell):
         E = GtkLayerShell.Edge
         # OVERLAY so it sits above waybar's full-width surface; hidden while fullscreen.
-        # Same top margin and height as the bar, so the compact island is the bar's centre.
-        super().__init__("nothing-island", [E.TOP], {E.TOP: 6}, layer=GtkLayerShell.Layer.OVERLAY)
+        # Same top margin and height as the menu bar, so the compact island is the bar's centre.
+        super().__init__("nothing-island", [E.TOP], {E.TOP: 4}, layer=GtkLayerShell.Layer.OVERLAY)
         self.shell = shell
         self.expanded = False
         self.pinned = False
@@ -565,11 +666,11 @@ class Island(LayerWindow):
         self.shell_box.set_halign(Gtk.Align.CENTER)
         self.ev.add(self.shell_box)
 
-        # ── compact row ──
-        self.compact = box(spacing=12, cls="island-compact")
+        # ── compact row: workspace dots (+ recording / now-playing / night / muted) ──
+        self.compact = box(spacing=10, cls="island-compact")
         self.compact.set_halign(Gtk.Align.CENTER)
         self.rec = label("●", "rec-dot", xalign=0.5)
-        self.eq = DotEq()
+        self.eq = EqBars()
         self.ws_box = box(spacing=6, cls="ws")
         self.ws_box.set_valign(Gtk.Align.CENTER)
         self.ws_dots = {}
@@ -586,7 +687,8 @@ class Island(LayerWindow):
         self.c_vol = label("", "c-vol")
         self.c_night = label("󰖔", "c-night")
         self.c_night.set_tooltip_text("Night mode")
-        for w in (self.rec, self.eq, self.ws_box, self.c_weather, self.c_clock, self.c_night, self.c_vol):
+        # (c_weather / c_clock stay unpacked: the menu bar shows the time on the right)
+        for w in (self.rec, self.eq, self.ws_box, self.c_night, self.c_vol):
             self.compact.pack_start(w, False, False, 0)
         self.shell_box.pack_start(self.compact, False, False, 0)
 
@@ -695,7 +797,7 @@ class Island(LayerWindow):
         top.pack_end(self.m_cycle, False, False, 0)
         self.m_title = label("Nothing playing", "m-title", ellipsize=True)
         self.m_artist = label("—", "m-artist dim", ellipsize=True)
-        self.m_bar = DotBar(n=24, dot=6, gap=4)
+        self.m_bar = Bar(width=260, height=5, color="fg")
         self.m_time = label("", "tiny dim")
         ctr = box(spacing=10)
         ctr.set_halign(Gtk.Align.START)
@@ -857,8 +959,8 @@ class Island(LayerWindow):
         self.c_night.set_visible(Sys.night())
 
     def refresh_panel(self, light=False):
-        self.p_clock.set_text(time.strftime("%H:%M"))
-        self.p_date.set_text(time.strftime("%A, %-d %B"))
+        self.p_clock.set_text(time.strftime("%-I:%M"))
+        self.p_date.set_text(date_long())
         if not self._vol_lock:
             vol, muted = Sys.volume()
             self._vol_lock = True
@@ -1135,87 +1237,100 @@ class NotifyLog:
 
 # ═════════════════════════════ CONTROL CENTER ═════════════════════════════
 class Control(LayerWindow):
-    WIDTH = 420
+    WIDTH = 344
 
     def __init__(self, shell):
         E = GtkLayerShell.Edge
-        super().__init__("nothing-control", [E.TOP, E.RIGHT], {E.TOP: 52, E.RIGHT: 12}, keyboard=True)
+        # under the menu bar (4 + 34 px), right-aligned with it
+        super().__init__("nothing-control", [E.TOP, E.RIGHT], {E.TOP: 46, E.RIGHT: 8}, keyboard=True)
         self.shell = shell
         self.open = False
         self._confirm = {}
         self.connect("key-press-event", self._on_key)
         self._had_focus = False   # "has the pointer been inside since opening"
         self._leave_t = None
+        self._vol_lock = False
+        self._vol_t = None
+        self.toggles, self.subs = {}, {}
 
-        # open/close animation comes from Hyprland's layer rule (slide in from the top)
+        # open/close animation comes from Hyprland's layer rule (slide in from the right)
         ev = Gtk.EventBox()
         ev.add_events(Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK)
         ev.connect("enter-notify-event", self._on_enter)
         ev.connect("leave-notify-event", self._on_leave)
         self.add(ev)
-        root = box(vertical=True, spacing=12, cls="control")
+        root = box(vertical=True, spacing=10, cls="control")
         root.set_size_request(self.WIDTH, -1)
         ev.add(root)
+        inner = self.WIDTH - 2 * 12 - 2 * 14   # panel padding + module padding
 
-        # header
+        # ── connectivity · Focus · Night Shift · Appearance ──
+        top = box(spacing=10)
+        top.set_homogeneous(True)
+        conn = box(vertical=True, spacing=12, cls="cc-module")
+        for key, glyph, name in (("wifi", "\U000f05a9", "Wi-Fi"), ("bt", "\U000f00af", "Bluetooth"),
+                                 ("mic", "\U000f036c", "Microphone")):
+            conn.pack_start(self._conn_row(key, glyph, name), False, False, 0)
+        top.pack_start(conn, True, True, 0)
+        right = box(vertical=True, spacing=10)
+        focus = box(cls="cc-module cc-wide")
+        focus.pack_start(self._conn_row("dnd", "\U000f009b", "Focus"), True, True, 0)
+        right.pack_start(focus, True, True, 0)
+        squares = box(spacing=10)
+        squares.set_homogeneous(True)
+        squares.pack_start(self._square("night", "\U000f0594", "Night Shift"), True, True, 0)
+        squares.pack_start(self._square("dark", "\U000f050e", "Dark Mode"), True, True, 0)
+        right.pack_start(squares, True, True, 0)
+        top.pack_start(right, True, True, 0)
+        root.pack_start(top, False, False, 0)
+
+        # ── sound ──
+        snd = box(vertical=True, spacing=8, cls="cc-module")
         head = box(spacing=8)
-        head.pack_start(label("●", "red-dot"), False, False, 0)
-        head.pack_start(label("Control Center", "cc-title"), False, False, 0)
-        self.uptime = label("", "tiny dim", xalign=1)
-        head.pack_end(self.uptime, False, False, 0)
-        root.pack_start(head, False, False, 0)
+        head.pack_start(label("Sound", "cc-name"), False, False, 0)
+        self.sink = label("", "cc-sub", xalign=1, ellipsize=True)
+        self.sink.set_max_width_chars(24)
+        head.pack_end(self.sink, False, False, 0)
+        snd.pack_start(head, False, False, 0)
+        self.vol = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
+        self.vol.set_draw_value(False)
+        add_cls(self.vol, "ccscale")
+        self.vol.connect("value-changed", self._on_vol)
+        snd.pack_start(self.vol, False, False, 0)
+        root.pack_start(snd, False, False, 0)
 
-        # CPU graph
-        cpu = box(vertical=True, spacing=10, cls="card")
+        # ── system: CPU history, memory, thermals ──
+        sysm = box(vertical=True, spacing=8, cls="cc-module")
         row = box()
-        row.pack_start(label("CPU", "stat-key"), False, False, 0)
+        row.pack_start(label("CPU", "cc-name"), False, False, 0)
         self.cpu_pct = label("", "stat-val", xalign=1)
         row.pack_end(self.cpu_pct, False, False, 0)
-        cpu.pack_start(row, False, False, 0)
-        self.graph = DotGraph()
-        cpu.pack_start(self.graph, False, False, 0)
-        # RAM
+        sysm.pack_start(row, False, False, 0)
+        self.graph = LineGraph(n=40, width=inner, height=44, color="accent")
+        sysm.pack_start(self.graph, False, False, 0)
         row2 = box()
-        row2.pack_start(label("RAM", "stat-key"), False, False, 0)
+        row2.pack_start(label("Memory", "cc-name"), False, False, 0)
         self.ram_txt = label("", "stat-val", xalign=1)
         row2.pack_end(self.ram_txt, False, False, 0)
-        cpu.pack_start(row2, False, False, 4)
-        self.ram_bar = DotBar(n=34, dot=7, gap=3.6)
-        cpu.pack_start(self.ram_bar, False, False, 0)
-        root.pack_start(cpu, False, False, 0)
-
-        # thermals
-        th = box(spacing=10, cls="thermals")
+        sysm.pack_start(row2, False, False, 4)
+        self.ram_bar = Bar(width=inner, height=6, color="green", color2="teal")
+        sysm.pack_start(self.ram_bar, False, False, 0)
+        th = box(spacing=8, cls="thermals")
         th.set_homogeneous(True)
         self.temps = {}
         for key in ("CPU", "GPU", "SSD"):
-            t = box(vertical=True, spacing=0, cls="card temp-tile")
-            t.pack_start(label(key, "tiny dim", xalign=0.5), False, False, 0)
+            t = box(vertical=True, spacing=0, cls="temp-tile")
+            t.pack_start(label(key, "cc-sub", xalign=0.5), False, False, 0)
             v = label("--", "temp-val", xalign=0.5)
             t.pack_start(v, False, False, 0)
             th.pack_start(t, True, True, 0)
             self.temps[key] = (t, v)
-        root.pack_start(th, False, False, 0)
+        sysm.pack_start(th, False, False, 4)
+        self.uptime = label("", "cc-sub", xalign=0.5)
+        sysm.pack_start(self.uptime, False, False, 0)
+        root.pack_start(sysm, False, False, 0)
 
-        # toggles
-        tg = box(spacing=7)
-        tg.set_homogeneous(True)
-        self.toggles = {}
-        for key, glyph, name in (("wifi", "󰤨", "Wi-Fi"), ("bt", "󰂯", "Bluetooth"),
-                                 ("dnd", "󰂛", "Silent"), ("mic", "󰍬", "Mic"),
-                                 ("night", "󰖔", "Night")):
-            b = Gtk.Button()
-            add_cls(b, "tile")
-            col = box(vertical=True, spacing=4)
-            col.pack_start(label(glyph, "glyph", xalign=0.5), False, False, 0)
-            col.pack_start(label(name, "tiny", xalign=0.5), False, False, 0)
-            b.add(col)
-            b.connect("clicked", lambda _b, k=key: self.shell.toggle(k, self))
-            tg.pack_start(b, True, True, 0)
-            self.toggles[key] = b
-        root.pack_start(tg, False, False, 0)
-
-        # notifications
+        # ── notifications ──
         nh = box(spacing=8)
         self.n_title = label("Notifications", "section")
         nh.pack_start(self.n_title, False, False, 0)
@@ -1230,19 +1345,21 @@ class Control(LayerWindow):
         self.n_scroll.add(self.n_list)
         root.pack_start(self.n_scroll, False, False, 0)
 
-        # power
-        pw = box(spacing=10, cls="power-row")
+        # ── power ──
+        pw = box(spacing=6, cls="power-row")
         pw.set_homogeneous(True)
         for key, glyph, name, cmd, confirm in (
-                ("lock", "󰌾", "Lock", "loginctl lock-session", False),
-                ("sleep", "󰤄", "Sleep", "systemctl suspend", False),
-                ("logout", "󰍃", "Log Out", "hyprctl dispatch 'hl.dsp.exit()'", True),
-                ("reboot", "󰜉", "Restart", "systemctl reboot", True),
-                ("power", "󰐥", "Shut Down", "systemctl poweroff", True)):
+                ("lock", "\U000f033e", "Lock", "loginctl lock-session", False),
+                ("sleep", "\U000f0904", "Sleep", "systemctl suspend", False),
+                ("logout", "\U000f0343", "Log Out", "hyprctl dispatch 'hl.dsp.exit()'", True),
+                ("reboot", "\U000f0709", "Restart", "systemctl reboot", True),
+                ("power", "\U000f0425", "Shut Down", "systemctl poweroff", True)):
             b = Gtk.Button()
             add_cls(b, "power-btn")
-            col = box(vertical=True, spacing=3)
-            col.pack_start(label(glyph, "glyph", xalign=0.5), False, False, 0)
+            col = box(vertical=True, spacing=4)
+            circ = label(glyph, "glyph power-circle", xalign=0.5)
+            circ.set_halign(Gtk.Align.CENTER)
+            col.pack_start(circ, False, False, 0)
             lbl = label(name, "tiny", xalign=0.5)
             col.pack_start(lbl, False, False, 0)
             b.add(col)
@@ -1253,6 +1370,48 @@ class Control(LayerWindow):
         self.show_all()
         self.hide()
         self.render_notifs()
+
+    # ── building blocks ──
+    def _circle(self, key, glyph):
+        b = Gtk.Button()
+        add_cls(b, "cc-circle")
+        b.add(label(glyph, "glyph", xalign=0.5))
+        b.set_valign(Gtk.Align.CENTER)
+        b.connect("clicked", lambda _b: self.shell.toggle(key, self))
+        self.toggles[key] = b
+        return b
+
+    def _conn_row(self, key, glyph, name):
+        row = box(spacing=10)
+        row.pack_start(self._circle(key, glyph), False, False, 0)
+        col = box(vertical=True)
+        col.set_valign(Gtk.Align.CENTER)
+        col.pack_start(label(name, "cc-name"), False, False, 0)
+        sub = label("", "cc-sub", ellipsize=True)
+        sub.set_max_width_chars(11)
+        col.pack_start(sub, False, False, 0)
+        self.subs[key] = sub
+        row.pack_start(col, True, True, 0)
+        return row
+
+    def _square(self, key, glyph, name):
+        m = box(vertical=True, spacing=6, cls="cc-module cc-square")
+        c = self._circle(key, glyph)
+        c.set_halign(Gtk.Align.CENTER)
+        m.pack_start(c, False, False, 0)
+        m.pack_start(label(name, "cc-sub", xalign=0.5), False, False, 0)
+        return m
+
+    def _on_vol(self, _scale):
+        if self._vol_lock:
+            return
+        if self._vol_t is None:
+            self._vol_t = GLib.timeout_add(40, self._apply_vol)
+
+    def _apply_vol(self):
+        self._vol_t = None
+        spawn(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", f"{self.vol.get_value() / 100:.2f}"])
+        return False
 
     # ── power with two-step confirm ──
     def _power(self, key, cmd, confirm, btn, lbl, name):
@@ -1370,7 +1529,7 @@ class Control(LayerWindow):
         self.graph.values = list(self.shell.cpu_hist)
         self.graph.queue_draw()
         pct, used, total = Sys.mem()
-        self.ram_txt.set_text(f"{used:.1f} / {total:.0f} GB")
+        self.ram_txt.set_text(f"{used:.1f} of {total:.0f} GB")
         self.ram_bar.set_value(pct)
         self.uptime.set_text(Sys.uptime())
         limits = {"CPU": 85, "GPU": 90, "SSD": 70}
@@ -1379,12 +1538,275 @@ class Control(LayerWindow):
             lbl.set_text(f"{v:.0f}°")
             set_cls(tile, "hot", v >= limits[k])
         in_thread(lambda: {"wifi": Sys.wifi_on(), "bt": Sys.bt_on(), "dnd": Sys.dnd(), "mic": Sys.mic_on(),
-                            "night": Sys.night()},
+                            "night": Sys.night(), "dark": Sys.dark(), "net": Sys.network(),
+                            "vol": Sys.volume(), "sink": Sys.sink_name()},
                   self._apply_toggles)
 
     def _apply_toggles(self, st):
-        for k, v in st.items():
-            set_cls(self.toggles[k], "on", v)
+        for k in self.toggles:
+            set_cls(self.toggles[k], "on", bool(st[k]))
+        kind, name = st["net"]
+        self.subs["wifi"].set_text(name if kind == "wifi" else "Ethernet" if kind == "ethernet"
+                                   else "Not Connected" if st["wifi"] else "Off")
+        self.subs["bt"].set_text("On" if st["bt"] else "Off")
+        self.subs["mic"].set_text("On" if st["mic"] else "Muted")
+        self.subs["dnd"].set_text("Do Not Disturb" if st["dnd"] else "Off")
+        vol, muted = st["vol"]
+        self._vol_lock = True
+        self.vol.set_value(0 if muted else vol)
+        self._vol_lock = False
+        self.sink.set_text(st["sink"])
+
+
+# ═════════════════════════════ DESKTOP WIDGETS ═════════════════════════════
+# macOS-style widgets on the wallpaper (bottom layer, under windows): Weather and Clock
+# (small), Calendar and System (medium). Frosted glass from Hyprland's "glass-nothing-widgets"
+# layer rule; everything else is drawn here with cairo + Pango.
+SMALL, GAP = 164, 12
+MEDIUM = 2 * SMALL + GAP
+FONT_UI, FONT_DISPLAY, FONT_ROUNDED = "SF Pro Text", "SF Pro Display", "SF Pro Rounded"
+GLYPHS = "Symbols Nerd Font"
+WHITE = (1, 1, 1, 1)
+
+
+class Widget(Gtk.DrawingArea):
+    RADIUS = 22
+
+    def __init__(self, w, h):
+        super().__init__()
+        self.set_size_request(w, h)
+        self.connect("draw", self._draw)
+
+    def _draw(self, _w, cr):
+        W, H = self.get_allocated_width(), self.get_allocated_height()
+        self.background(cr, W, H)
+        self.paint(cr, W, H)
+
+    def background(self, cr, W, H):
+        """Frosted glass card: translucent fill, hairline, light catching the top edge."""
+        rounded_rect(cr, 0.5, 0.5, W - 1, H - 1, self.RADIUS)
+        set_rgba(cr, COL["glass"])
+        cr.fill_preserve()
+        set_rgba(cr, COL["line"])
+        cr.set_line_width(1)
+        cr.stroke()
+        hl = COL["highlight"]
+        grad = cairo.LinearGradient(0, 0, 0, H * 0.45)
+        grad.add_color_stop_rgba(0, hl[0], hl[1], hl[2], min(1, hl[3] * 2.2))
+        grad.add_color_stop_rgba(1, hl[0], hl[1], hl[2], 0)
+        rounded_rect(cr, 1.5, 1.5, W - 3, H - 3, self.RADIUS - 1)
+        cr.set_source(grad)
+        cr.stroke()
+
+    def paint(self, cr, W, H):
+        pass
+
+
+# condition → (sky gradient day, sky gradient night, icon layers [(glyph, colour, dx, dy, scale)])
+SUN, MOON, CLOUD = "\U000f0599", "\U000f0594", "\U000f0590"
+SKIES = {
+    "clear":   (("#2f7fdf", "#5fb0f0"), ("#0d1838", "#26386a")),
+    "partly":  (("#3d82d6", "#78aee6"), ("#16213f", "#334468")),
+    "cloudy":  (("#5d7591", "#8ea2b8"), ("#262e3c", "#424c5e")),
+    "fog":     (("#7f8b98", "#a9b3bd"), ("#2b3038", "#474e58")),
+    "rain":    (("#3f5168", "#6a7e95"), ("#1b2230", "#343f52")),
+    "snow":    (("#7d97b8", "#b4c6dc"), ("#28344a", "#47566e")),
+    "thunder": (("#33375a", "#5c5f86"), ("#191b30", "#33365a")),
+}
+CONDITION = {"113": "clear", "116": "partly", "119": "cloudy", "122": "cloudy",
+             "143": "fog", "248": "fog", "260": "fog",
+             "200": "thunder", "386": "thunder", "389": "thunder", "392": "thunder", "395": "thunder"}
+for _c in ("179", "182", "185", "227", "230", "323", "326", "329", "332", "335", "338", "368", "371"):
+    CONDITION[_c] = "snow"
+
+
+def weather_kind(code):
+    return CONDITION.get(code, "rain" if code in WEATHER_ICONS else "cloudy")
+
+
+class WeatherWidget(Widget):
+    """Apple Weather style: sky gradient for the current condition, white type."""
+
+    def paint(self, cr, W, H):
+        w = weather()
+        kind = weather_kind(w["code"]) if w else "cloudy"
+        day = w["is_day"] if w else True
+        top, bottom = SKIES[kind][0 if day else 1]
+        grad = cairo.LinearGradient(0, 0, 0, H)
+        grad.add_color_stop_rgb(0, *rgb(top))
+        grad.add_color_stop_rgb(1, *rgb(bottom))
+        rounded_rect(cr, 0, 0, W, H, self.RADIUS)
+        cr.set_source(grad)
+        cr.fill()
+        x = 16
+        draw_text(cr, (w["area"] if w else "Weather") + " \U000f05cd", f"{FONT_UI} Semi-Bold 13", x, 14, WHITE, width=W - 28)
+        draw_text(cr, w["temp"] if w else "--°", f"{FONT_DISPLAY} Light 44", x - 2, 30, WHITE)
+        # colourful condition icon
+        sun = (1.0, 0.84, 0.04, 1)
+        layers = {
+            "clear":  [(SUN if day else MOON, sun if day else (0.93, 0.93, 1, 1), 0, 0, 1)],
+            "partly": [(SUN if day else MOON, sun if day else (0.93, 0.93, 1, 1), -6, -5, 0.8), (CLOUD, WHITE, 3, 2, 1)],
+        }.get(kind, [(w["icon"] if w else CLOUD, WHITE, 0, 0, 1)])
+        for glyph, color, dx, dy, sc in layers:
+            draw_text(cr, glyph, f"{GLYPHS} {int(17 * sc)}", x + dx + 2, H - 64 + dy, color)
+        draw_text(cr, w["cond"] if w else "Unavailable", f"{FONT_UI} Semi-Bold 12", x, H - 42, WHITE, width=W - 28)
+        draw_text(cr, f"H:{w['hi']}  L:{w['lo']}" if w else "", f"{FONT_UI} Medium 12", x, H - 25, WHITE, alpha=0.85)
+
+
+class ClockWidget(Widget):
+    """Analog clock face like the macOS Clock widget; orange second hand."""
+
+    def paint(self, cr, W, H):
+        cx, cy, r = W / 2, H / 2, min(W, H) / 2 - 12
+        dark = COL["dark"]
+        face = (0.11, 0.11, 0.12, 0.92) if dark else (1, 1, 1, 0.95)
+        ink = COL["fg"]
+        cr.arc(cx, cy, r, 0, 2 * math.pi)
+        set_rgba(cr, face)
+        cr.fill()
+        for i in range(1, 13):
+            a = i * math.pi / 6 - math.pi / 2
+            draw_text(cr, str(i), f"{FONT_ROUNDED} Medium 11", cx + math.cos(a) * (r - 14),
+                      cy + math.sin(a) * (r - 14) - 8, ink, "center")
+        for i in range(60):
+            if i % 5:
+                a = i * math.pi / 30
+                cr.move_to(cx + math.cos(a) * (r - 3), cy + math.sin(a) * (r - 3))
+                cr.line_to(cx + math.cos(a) * (r - 6), cy + math.sin(a) * (r - 6))
+        set_rgba(cr, ink, 0.3)
+        cr.set_line_width(1)
+        cr.stroke()
+        t = time.localtime()
+        sec = t.tm_sec
+        mins = t.tm_min + sec / 60
+        hrs = t.tm_hour % 12 + mins / 60
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        for frac, length, width in ((hrs / 12, r * 0.5, 4.5), (mins / 60, r * 0.78, 3.5)):
+            a = frac * 2 * math.pi - math.pi / 2
+            cr.move_to(cx, cy)
+            cr.line_to(cx + math.cos(a) * length, cy + math.sin(a) * length)
+            set_rgba(cr, ink)
+            cr.set_line_width(width)
+            cr.stroke()
+        a = sec / 60 * 2 * math.pi - math.pi / 2
+        cr.move_to(cx - math.cos(a) * 12, cy - math.sin(a) * 12)
+        cr.line_to(cx + math.cos(a) * (r - 6), cy + math.sin(a) * (r - 6))
+        set_rgba(cr, COL["orange"])
+        cr.set_line_width(1.5)
+        cr.stroke()
+        cr.arc(cx, cy, 3.2, 0, 2 * math.pi)
+        cr.fill()
+        cr.arc(cx, cy, 1.4, 0, 2 * math.pi)
+        set_rgba(cr, face)
+        cr.fill()
+
+
+class CalendarWidget(Widget):
+    """macOS Calendar widget (medium): weekday in red, big date, month grid."""
+
+    def paint(self, cr, W, H):
+        t = time.localtime()
+        red, fg, dim = COL["red"], COL["fg"], COL["dim"]
+        draw_text(cr, DAY_NAMES[t.tm_wday].upper(), f"{FONT_UI} Bold 11", 18, 16, red)
+        draw_text(cr, str(t.tm_mday), f"{FONT_DISPLAY} Regular 52", 15, 28, fg)
+        draw_text(cr, MONTH_NAMES[t.tm_mon - 1], f"{FONT_UI} Semi-Bold 13", 18, 96, fg)
+        draw_text(cr, "No events today", f"{FONT_UI} Medium 11", 18, 116, dim)
+        # month grid, weeks start on Monday
+        gx, gy, cw, ch = 150, 16, (W - 150 - 14) / 7, 18
+        draw_text(cr, MONTH_NAMES[t.tm_mon - 1].upper(), f"{FONT_UI} Bold 10", gx + 4, gy, red)
+        for i, d in enumerate("MTWTFSS"):
+            draw_text(cr, d, f"{FONT_UI} Semi-Bold 9", gx + cw * (i + 0.5), gy + 18, dim, "center")
+        first = time.mktime((t.tm_year, t.tm_mon, 1, 12, 0, 0, 0, 0, -1))
+        lead = time.localtime(first).tm_wday
+        nxt = (t.tm_year + (t.tm_mon == 12), t.tm_mon % 12 + 1, 1, 12, 0, 0, 0, 0, -1)
+        ndays = time.localtime(time.mktime(nxt) - 86400).tm_mday
+        for day in range(1, ndays + 1):
+            pos = lead + day - 1
+            x, y = gx + cw * (pos % 7 + 0.5), gy + 34 + ch * (pos // 7)
+            if day == t.tm_mday:
+                cr.arc(x, y + 7, 8.5, 0, 2 * math.pi)
+                set_rgba(cr, red)
+                cr.fill()
+                draw_text(cr, str(day), f"{FONT_UI} Bold 10", x, y, WHITE, "center")
+            else:
+                weekend = pos % 7 >= 5
+                draw_text(cr, str(day), f"{FONT_UI} Medium 10", x, y, dim if weekend else fg, "center")
+
+
+class StatsWidget(Widget):
+    """System widget (medium): CPU / Memory / Disk as Activity-style rings + readouts."""
+
+    RINGS = (("CPU", "pink"), ("Memory", "green"), ("Disk", "teal"))
+
+    def __init__(self, shell, w, h):
+        super().__init__(w, h)
+        self.shell = shell
+
+    def values(self):
+        cpu = self.shell.cpu_last
+        mem, used, total = Sys.mem()
+        st = os.statvfs("/")
+        disk = 100 * (1 - st.f_bavail / st.f_blocks) if st.f_blocks else 0
+        return (cpu, mem, disk), (f"{cpu:.0f}%", f"{used:.1f} / {total:.0f} GB", f"{disk:.0f}%")
+
+    def paint(self, cr, W, H):
+        vals, texts = self.values()
+        cx, cy = 18 + 62, H / 2
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        for i, ((_, color), v) in enumerate(zip(self.RINGS, vals)):
+            r, c = 58 - i * 17, COL[color]
+            cr.set_line_width(13)
+            cr.arc(cx, cy, r, 0, 2 * math.pi)
+            set_rgba(cr, c, 0.22)
+            cr.stroke()
+            if v > 0.5:
+                cr.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * min(v, 100) / 100)
+                set_rgba(cr, c)
+                cr.stroke()
+        x = 166
+        for i, ((name, color), txt) in enumerate(zip(self.RINGS, texts)):
+            y = 16 + i * 46
+            draw_text(cr, name, f"{FONT_UI} Semi-Bold 11", x, y, COL[color])
+            draw_text(cr, txt, f"{FONT_ROUNDED} Semi-Bold 17", x, y + 14, COL["fg"], width=W - x - 64)
+        # thermals: a quiet column on the right
+        for i, (k, v) in enumerate(Sys.temps().items()):
+            y = 16 + i * 46
+            draw_text(cr, k, f"{FONT_UI} Semi-Bold 11", W - 16, y, COL["dim"], "right")
+            draw_text(cr, f"{v:.0f}°", f"{FONT_ROUNDED} Medium 15", W - 16, y + 15,
+                      COL["orange"] if v >= 80 else COL["fg"], "right")
+
+
+class Widgets(LayerWindow):
+    def __init__(self, shell):
+        E = GtkLayerShell.Edge
+        super().__init__("nothing-widgets", [E.TOP, E.LEFT], {E.TOP: 56, E.LEFT: 18},
+                         layer=GtkLayerShell.Layer.BOTTOM)
+        self.shell = shell
+        grid = box(vertical=True, spacing=GAP)
+        row = box(spacing=GAP)
+        self.weather = WeatherWidget(SMALL, SMALL)
+        self.clock = ClockWidget(SMALL, SMALL)
+        row.pack_start(self.weather, False, False, 0)
+        row.pack_start(self.clock, False, False, 0)
+        grid.pack_start(row, False, False, 0)
+        self.calendar = CalendarWidget(MEDIUM, SMALL)
+        grid.pack_start(self.calendar, False, False, 0)
+        self.stats = StatsWidget(shell, MEDIUM, SMALL)
+        grid.pack_start(self.stats, False, False, 0)
+        self.add(grid)
+        self.show_all()
+        GLib.timeout_add(1000, self._tick)
+        self._n = 0
+
+    def _tick(self):
+        self._n += 1
+        self.clock.queue_draw()
+        if self._n % 3 == 0:
+            self.stats.queue_draw()
+        if self._n % 60 == 0:
+            self.calendar.queue_draw()
+            self.weather.queue_draw()
+        return True
 
 
 # ═════════════════════════════ SHELL ═════════════════════════════
@@ -1393,13 +1815,14 @@ class Shell:
         self.island = None
         self.control = None
         self.notifs = None
-        self.cpu_hist = [0.0] * 34
+        self.cpu_hist = [0.0] * 40
         self.cpu_last = 0.0
         self._load_css()
         self.media = Media(self)
         self.notifs = NotifyLog(self)
         self.island = Island(self)
         self.control = Control(self)
+        self.widgets = Widgets(self)
         self.media.refresh()
         self._workspaces()
         self._listen_hyprland()
@@ -1422,15 +1845,21 @@ class Shell:
                                                  Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
     def reload_css(self):
+        """style.css + palette (after `nothing-theme`): GTK restyles itself, cairo needs a redraw."""
+        load_colors()
         try:
             self.css.load_from_path(CSS_FILE)
         except GLib.Error as e:
             return "css error: " + e.message
+        for w in (self.island, self.control, self.widgets):
+            w.queue_draw()
+        if self.control.open:
+            self.control.refresh()
         return "ok"
 
     def _sample(self):
         self.cpu_last = Sys.cpu()
-        self.cpu_hist = (self.cpu_hist + [self.cpu_last])[-34:]
+        self.cpu_hist = (self.cpu_hist + [self.cpu_last])[-40:]
         return True
 
     def _compact_tick(self):
@@ -1452,7 +1881,8 @@ class Shell:
 
     def _weather_tick(self):
         if os.path.exists(WEATHER_SCRIPT):
-            in_thread(lambda: run([WEATHER_SCRIPT, "bar"], timeout=15), lambda _r: self.island.refresh_compact())
+            in_thread(lambda: run([WEATHER_SCRIPT, "bar"], timeout=15),
+                      lambda _r: (self.island.refresh_compact(), self.widgets.weather.queue_draw()))
         return True
 
     # ── toggles shared by island and control center ──
@@ -1473,6 +1903,8 @@ class Shell:
                 run([os.path.join(BIN, "nothing-night"), "toggle"], 5)
             elif key == "mic":
                 run(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
+            elif key == "dark":
+                run([os.path.join(BIN, "nothing-theme"), "toggle"], 15)
 
         def done(_):
             if self.control.open:

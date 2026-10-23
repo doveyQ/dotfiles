@@ -1,13 +1,14 @@
-/* Copenhagen notifications — popups (history lives in nothing-shell's quick settings)
-   Colours + fonts: ~/.config/hypr/theme/palette.css                                  */
+/* macOS notification banners — popups (history lives in nothing-shell's Control Center)
+   Colours: ~/.config/hypr/theme/palette.css (light / dark)                                 */
 @import url("/etc/xdg/swaync/style.css");
 @import url("../hypr/theme/palette.css");
+@import url("../hypr/themes/typography.css");
 
 :root {
   --cc-bg: alpha(@base, 0.86);
   --noti-border-color: @line;
-  --noti-bg: 46, 43, 39;
-  --noti-bg-alpha: 0.78;
+  --noti-bg: 40, 40, 42;
+  --noti-bg-alpha: 0.70;
   --noti-bg-darker: @base;
   --noti-bg-hover: alpha(@fg, 0.10);
   --noti-bg-focus: transparent;
@@ -16,7 +17,7 @@
   --text-color: @fg;
   --text-color-disabled: @mute;
   --bg-selected: @accent;
-  --border-radius: 18px;
+  --border-radius: 16px;
   --font-size-body: 13px;
   --font-size-summary: 14px;
   --mpris-album-art-icon-size: 72px;
@@ -27,9 +28,9 @@
 .control-center {
   background: var(--cc-bg);
   border: 1px solid @line;
-  border-radius: 24px;
-  padding: 14px;
-  box-shadow: 0 16px 40px alpha(black, 0.35);
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 16px 40px @shadow;
 }
 
 .widget { margin: 6px 4px; }
@@ -48,23 +49,23 @@
   color: @dim;
 }
 .widget-title > button {
-  border-radius: 10px;
-  background: @card;
+  border-radius: 999px;
+  background: @card2;
   border: 1px solid @line;
   color: @fg;
   padding: 4px 14px;
 }
-.widget-title > button:hover { background: @card2; }
+.widget-title > button:hover { background: @press; }
 
 .control-center .control-center-list-placeholder { opacity: 0.4; }
 
 .notification-row .notification-background .notification {
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid @line;
-  background: alpha(@base, 0.90);
+  background: @glass_hi;
 }
 .notification-row .notification-background .notification.critical {
-  border: 1px solid alpha(@alert, 0.7);
+  border: 1px solid alpha(@red, 0.8);
 }
 .notification-row .notification-background .notification .notification-default-action .notification-content .text-box .summary {
   font-weight: 600;
@@ -86,8 +87,9 @@
 .floating-notifications .notification-row .notification-background .notification {
   background: @glass_hi;
   border: 1px solid @line;
-  border-radius: 18px;
-  box-shadow: 0 10px 30px alpha(black, 0.30);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 @highlight, 0 8px 32px @shadow;
 }
 .notification .app-name, .notification .summary { color: @fg; }
-.notification .body { color: alpha(@fg, 0.85); }
+.notification .body { color: @fg; }
+.notification .time { color: @dim; }

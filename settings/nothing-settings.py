@@ -30,6 +30,7 @@ import time
 
 HOME = os.path.expanduser("~")
 BIN = os.path.join(HOME, ".local", "bin")
+APP_CSS = []   # the app's CssProvider, reloaded after a light / dark switch
 HERE = os.path.dirname(os.path.realpath(__file__))
 REPO = os.path.dirname(HERE)
 CONF = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.join(HOME, ".config")), "nothing")
@@ -164,7 +165,7 @@ SCHEMA = {
     "appearance.blur":             ("decoration:blur:enabled", bool, True),
     "appearance.glow":             ("decoration:glow:enabled", bool, False),
     "appearance.animations":       ("animations:enabled", bool, True),
-    "appearance.wallpaper":        (None, str, os.path.join(HYPR, "wallpapers", "copenhagen.jpg")),
+    "appearance.wallpaper":        (None, str, os.path.join(HYPR, "theme", "wallpaper.jpg")),
     "idle.lock":                   (None, int, 15),     # minutes idle, 0 = never
     "idle.screen_off":             (None, int, 0),      # 0 here = 30 s after locking (unless set)
     "idle.suspend":                (None, int, 60),
@@ -480,6 +481,15 @@ def night_set(key, raw):
 # ── notifications ──
 def dnd_get():
     return out(["swaync-client", "-D"]) == "true"
+
+
+def theme_mode():
+    """'dark' or 'light' — the active theme link ~/.config/hypr/theme (nothing-theme)."""
+    return "light" if os.path.realpath(os.path.join(HYPR, "theme")).endswith("light") else "dark"
+
+
+def theme_set(mode):
+    run([os.path.join(BIN, "nothing-theme"), mode], timeout=20)
 
 
 def dnd_set(on):
@@ -1022,12 +1032,12 @@ def gui(page):
                 self.body.remove(c)
 
         def header(self, title=None, subtitle=None):
-            self.body.pack_start(lbl((title or self.title).upper(), "page-title"), False, False, 0)
+            self.body.pack_start(lbl(title or self.title, "page-title"), False, False, 0)
             if subtitle or self.subtitle:
                 self.body.pack_start(lbl(subtitle or self.subtitle, "page-sub", wrap=True), False, False, 4)
 
         def section(self, title):
-            self.body.pack_start(lbl(title.upper(), "section", ellipsize=True), False, False, 8)
+            self.body.pack_start(lbl(title, "section", ellipsize=True), False, False, 8)
             card = Gtk.ListBox()
             card.set_selection_mode(Gtk.SelectionMode.NONE)
             cls(card, "card")
@@ -1371,6 +1381,15 @@ def gui(page):
 
         def build(self):
             self.header()
+            a = self.section("Appearance")
+            seg = Gtk.Box(spacing=6)
+            self.mode_btns = {}
+            for m in ("light", "dark"):
+                b = button(m.title(), lambda m=m: self._mode(m))
+                seg.pack_start(b, False, False, 0)
+                self.mode_btns[m] = b
+            self._mark_mode(theme_mode())
+            self.row(a, "Light or dark", "Menu bar, Control Center, widgets, apps and wallpaper · Super+Shift+T", seg)
             c = self.section("Wallpaper")
             flow = Gtk.FlowBox()
             flow.set_max_children_per_line(4)
@@ -1426,6 +1445,18 @@ def gui(page):
         def _set(self, key, value):
             typ = SCHEMA[key][1]
             bg(lambda: set_setting(key, typ(round(value, 2) if typ is float else value) if typ is not bool else value))
+
+        def _mark_mode(self, mode):
+            for m, b in self.mode_btns.items():
+                ctx = b.get_style_context()
+                (ctx.add_class if m == mode else ctx.remove_class)("accent")
+
+        def _mode(self, mode):
+            theme_set(mode)
+            self._mark_mode(mode)
+            Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", mode == "dark")
+            for css in APP_CSS:
+                css.load_from_path(os.path.join(HERE, "style.css"))
 
         def _wall(self, path):
             bg(lambda: set_setting("appearance.wallpaper", path), lambda _r: (app.win.toast("Wallpaper changed"), self.rebuild()))
@@ -1748,6 +1779,11 @@ def gui(page):
             super().__init__(application=application, title="Settings")
             self.set_default_size(1040, 720)
             cls(self, "nothing-settings")
+            # translucent window: Hyprland blurs what's behind the sidebar (macOS vibrancy)
+            visual = self.get_screen().get_rgba_visual()
+            if visual:
+                self.set_visual(visual)
+                self.set_app_paintable(True)
             overlay = Gtk.Overlay()
             self.add(overlay)
             root = Gtk.Box()
@@ -1755,7 +1791,20 @@ def gui(page):
 
             side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             cls(side, "sidebar")
-            side.pack_start(lbl("● SETTINGS", "brand"), False, False, 0)
+            # traffic lights: close · minimise (to the special workspace) · full screen
+            lights = Gtk.Box(spacing=8)
+            cls(lights, "traffic")
+            for name, tip, act in (("close", "Close", self.close),
+                                   ("min", "Minimise", lambda: spawn(["hyprctl", "dispatch",
+                                    'hl.dsp.window.move({ workspace = "special:magic" })'])),
+                                   ("zoom", "Full Screen", lambda: spawn(["hyprctl", "dispatch", "hl.dsp.window.fullscreen()"]))):
+                b = Gtk.Button()
+                cls(b, "light", name)
+                b.set_tooltip_text(tip)
+                b.connect("clicked", lambda _b, f=act: f())
+                lights.pack_start(b, False, False, 0)
+            side.pack_start(lights, False, False, 0)
+            side.pack_start(lbl("Settings", "brand"), False, False, 0)
             self.nav = Gtk.ListBox()
             cls(self.nav, "nav")
             self.nav.connect("row-selected", lambda _l, r: r and self._show(r.page))
@@ -1901,7 +1950,8 @@ def gui(page):
             css.load_from_path(os.path.join(HERE, "style.css"))
             Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), css,
                                                      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-            Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", True)
+            APP_CSS.append(css)
+            Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", theme_mode() == "dark")
 
     GLib.set_prgname("nothing-settings")
     app = App()
@@ -1918,7 +1968,8 @@ def selftest(app, Win, Gtk, page_classes):
     g = globals()
     actions = ["set_setting", "reset_setting", "wifi_power", "wifi_connect", "wifi_disconnect", "wifi_forget",
                "bt_power", "bt_action", "bt_scan", "pkexec", "install_packages", "spawn", "login_set",
-               "dnd_set", "sound_default", "sound_volume", "sound_mute", "display_apply", "restart_idle"]
+               "dnd_set", "sound_default", "sound_volume", "sound_mute", "display_apply", "restart_idle",
+               "theme_set"]
     actions.append("brightness_set")
     for name in actions:
         g[name] = (lambda n: lambda *a, **k: calls.append((n, a)) or ((0, "", "") if n in ("pkexec", "install_packages") else None))(name)

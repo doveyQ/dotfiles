@@ -4,11 +4,12 @@ rofi -dmenu -i -theme ~/.config/rofi/settings.rasi -theme-str 'listview { column
 SUPER Return          Terminal (kitty)
 SUPER D  ·  SUPER R   App launcher
 SUPER I               Settings
-SUPER N               Control center
+SUPER N               Control Center
 SUPER A               Dynamic island (pin open)
 SUPER SHIFT X         Power menu  (p r s l e)
 SUPER L               Lock (hyprlock)
 SUPER CTRL N          Night mode on / off
+SUPER SHIFT T         Light ↔ Dark mode
 SUPER Q               Close window
 SUPER Space           Toggle floating
 SUPER F               Fullscreen
@@ -25,7 +26,7 @@ SUPER S               Scratchpad
 SUPER P  ·  SUPER J   Pseudotile · Toggle split
 PRINT                 Screenshot region → clipboard
 SHIFT PRINT           Screenshot → ~/Pictures
-SUPER SHIFT PRINT     Record screen (red dot in island)
+SUPER SHIFT PRINT     Record screen (red dot in the menu bar)
 3-finger swipe        Previous / next workspace
 FN brightness keys    Screen brightness (laptop)
 POWER key             Power menu (laptop)

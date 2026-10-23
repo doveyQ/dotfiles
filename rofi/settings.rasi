@@ -1,7 +1,7 @@
-/* Settings hub / pickers — inherits the launcher look, two-column grid */
+/* Pickers (night mode, keybindings …) — the Spotlight look, two columns */
 @import "nothing.rasi"
 window   { width: 640px; }
-listview { columns: 2; lines: 8; spacing: 6px; fixed-height: true; }
-element  { padding: 13px 18px; border-radius: 12px; background-color: @card; }
-element selected.normal { background-color: @card2; text-color: @fg; }
-entry    { placeholder: "Settings"; }
+listview { columns: 2; lines: 8; spacing: 4px; fixed-height: true; }
+element  { padding: 10px 14px; border-radius: 10px; background-color: @card; }
+element selected.normal { background-color: @accent; text-color: @on-accent; }
+entry    { placeholder: "Search"; }

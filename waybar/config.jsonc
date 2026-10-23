@@ -1,28 +1,61 @@
-// Copenhagen — one continuous floating glass bar
-// Left: launcher · Centre: the island (drawn by nothing-shell, sits inside the bar)
-// Right: drawer (tray · cpu · memory, revealed on hover) · net speed · Wi-Fi · clipboard
-//        · battery · notifications · quick settings · power
+// macOS-style menu bar — one continuous glass bar
+// Left:   Apple menu · app name · window title
+// Centre: workspace dots (the island, drawn by nothing-shell — hover it for media & calendar)
+// Right:  drawer (tray · CPU · memory) · net speed · Bluetooth · Wi-Fi · battery · clipboard
+//         · Control Center · date & time (click → Control Center / notifications)
 {
   "layer": "top",
   "position": "top",
   "include": ["~/.config/waybar/local.jsonc"],   // per machine, e.g. "output" — see local.example.jsonc
-  "height": 36,
-  "margin-top": 6,
-  "margin-left": 12,
-  "margin-right": 12,
+  "height": 34,
+  "margin-top": 4,
+  "margin-left": 8,
+  "margin-right": 8,
   "spacing": 0,
   "exclusive": true,
   "reload_style_on_change": true,
 
-  "modules-left":   ["custom/logo"],
-  "modules-right":  ["group/system"],
+  "modules-left":  ["custom/apple", "hyprland/window#app", "hyprland/window"],
+  "modules-right": ["group/system", "custom/clock"],
 
   // ────────────── LEFT ──────────────
-  "custom/logo": {
-    "format": "",
+  "custom/apple": {
+    "format": "",
     "tooltip": false,
-    "on-click": "rofi -show drun -theme ~/.config/rofi/nothing.rasi",
-    "on-click-right": "~/.local/bin/nothing-settings"
+    "on-click": "~/.local/bin/nothing-applemenu",
+    "on-click-right": "rofi -show drun -theme ~/.config/rofi/nothing.rasi"
+  },
+
+  // bold app name, like the macOS menu bar
+  "hyprland/window#app": {
+    "format": "{class}",
+    "separate-outputs": true,
+    "rewrite": {
+      "^firefox$": "Firefox",
+      "^kitty$": "Terminal",
+      "^(code|Code|code-oss|code-url-handler)$": "Code",
+      "^(org\\.kde\\.dolphin|dolphin)$": "Files",
+      "^(dev\\.nothing\\.Settings|nothing-settings)$": "Settings",
+      "^nothing-float$": "Terminal",
+      "^(chromium|Chromium)$": "Chromium",
+      "^(google-chrome|Google-chrome)$": "Chrome",
+      "^jetbrains-idea.*$": "IntelliJ IDEA",
+      "^jetbrains-pycharm.*$": "PyCharm",
+      "^(org\\.pulseaudio\\.pavucontrol|pavucontrol)$": "Sound",
+      "^blueman-manager$": "Bluetooth",
+      "^nm-connection-editor$": "Network",
+      "^(Spotify|spotify)$": "Spotify",
+      "^(discord|vesktop)$": "Discord",
+      "^(steam|Steam)$": "Steam",
+      "^(mpv|vlc)$": "Media Player",
+      "^(?:[a-z0-9-]+\\.)+([A-Za-z0-9-]+)$": "$1"
+    }
+  },
+  "hyprland/window": {
+    "format": "{title}",
+    "max-length": 56,
+    "separate-outputs": true,
+    "tooltip": false
   },
 
   // ────────────── RIGHT ──────────────
@@ -32,12 +65,11 @@
       "group/more",
       "custom/record",
       "network#speed",
+      "bluetooth",
       "network",
-      "custom/clipboard",
       "battery",
-      "custom/notification",
-      "custom/quick",
-      "custom/power"
+      "custom/clipboard",
+      "custom/quick"
     ]
   },
 
@@ -45,7 +77,7 @@
   "group/more": {
     "orientation": "horizontal",
     "drawer": {
-      "transition-duration": 320,
+      "transition-duration": 280,
       "transition-left-to-right": false,
       "children-class": "drawer-child"
     },
@@ -62,7 +94,7 @@
     "on-click": "~/.local/bin/nothing-shell control toggle"
   },
   "memory": {
-    "format": "MEM {percentage}%",
+    "format": "RAM {percentage}%",
     "interval": 5,
     "tooltip-format": "{used:0.1f} / {total:0.1f} GiB",
     "on-click": "~/.local/bin/nothing-shell control toggle"
@@ -70,9 +102,22 @@
 
   "network#speed": {
     "interval": 2,
-    "format": "󰇚 {bandwidthDownBytes}   󰕒 {bandwidthUpBytes}",
+    "format": "󰇚 {bandwidthDownBytes}  󰕒 {bandwidthUpBytes}",
     "format-disconnected": "",
     "tooltip": false
+  },
+
+  "bluetooth": {
+    "format": "󰂯",
+    "format-off": "󰂲",
+    "format-disabled": "󰂲",
+    "format-connected": "󰂱",
+    "format-no-controller": "",
+    "tooltip-format": "Bluetooth: {status}",
+    "tooltip-format-connected": "Bluetooth\n{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias}",
+    "on-click": "~/.local/bin/nothing-settings bluetooth",
+    "on-click-right": "blueman-manager"
   },
 
   "network": {
@@ -83,27 +128,27 @@
     "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
     "tooltip-format-wifi": "{essid} · {signalStrength}%\n{ipaddr}",
     "tooltip-format-ethernet": "{ifname} · {ipaddr}",
-    "tooltip-format-disconnected": "Offline",
+    "tooltip-format-disconnected": "Not connected",
     "on-click": "~/.local/bin/nothing-settings network",
     "on-click-right": "nm-connection-editor"
+  },
+
+  // laptop only — Waybar hides the module when there is no battery
+  "battery": {
+    "format": "{capacity}% {icon}",
+    "format-charging": "{capacity}% 󰂄",
+    "format-plugged": "{capacity}% 󰚥",
+    "format-icons": ["󰂎", "󰁻", "󰁽", "󰁿", "󰁹"],
+    "states": { "warning": 20, "critical": 10 },
+    "interval": 30,
+    "tooltip-format": "{timeTo} · {power:.1f} W",
+    "on-click": "~/.local/bin/nothing-settings powermode"
   },
 
   "custom/clipboard": {
     "format": "󰅌",
     "tooltip-format": "Clipboard history  (Super+V)",
     "on-click": "cliphist list | rofi -dmenu -theme ~/.config/rofi/nothing.rasi | cliphist decode | wl-copy"
-  },
-
-  // laptop only — Waybar hides the module when there is no battery
-  "battery": {
-    "format": "{icon} {capacity}%",
-    "format-charging": "󰂄 {capacity}%",
-    "format-plugged": "󰚥 {capacity}%",
-    "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
-    "states": { "warning": 20, "critical": 10 },
-    "interval": 30,
-    "tooltip-format": "{timeTo} · {power:.1f} W",
-    "on-click": "~/.local/bin/nothing-settings powermode"
   },
 
   "custom/record": {
@@ -114,27 +159,19 @@
     "on-click": "~/.config/hypr/scripts/record.sh toggle"
   },
 
-  "custom/notification": {
-    "exec": "~/.local/bin/nothing-shell notif-status",
-    "return-type": "json",
-    "interval": 30,
-    "signal": 9,
-    "on-click": "~/.local/bin/nothing-shell control toggle",
-    "on-click-right": "~/.local/bin/nothing-settings dnd",
-    "escape": false
-  },
-
   "custom/quick": {
     "format": "",
-    "tooltip-format": "Quick settings  (Super+N)",
+    "tooltip-format": "Control Center  (Super+N)",
     "on-click": "~/.local/bin/nothing-shell control toggle",
-    "on-click-right": "~/.local/bin/nothing-settings"
+    "on-click-right": "~/.local/bin/nothing-theme toggle"
   },
 
-  "custom/power": {
-    "format": "󰐥",
-    "tooltip-format": "Power menu  (Super+Shift+X)",
-    "on-click": "~/.local/bin/nothing-power",
-    "on-click-right": "loginctl lock-session"
+  // "Fri 23 Oct   1:07 PM" — click: Control Center (notifications), right-click: Do Not Disturb
+  "custom/clock": {
+    "exec": "~/.config/waybar/scripts/clock.sh",
+    "return-type": "json",
+    "interval": 5,
+    "on-click": "~/.local/bin/nothing-shell control toggle",
+    "on-click-right": "~/.local/bin/nothing-settings dnd"
   }
 }
