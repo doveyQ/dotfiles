@@ -9,7 +9,7 @@
 #   ./install.sh --dry-run       print what would happen
 #   ./install.sh -y              don't ask before installing packages
 #   ./install.sh --no-boot-lock  keep your distribution's login screen (default: ask, then
-#                                boot straight into the Nothing lock screen via greetd)
+#                                boot straight into the lock screen via greetd)
 #   ./install.sh --restore-login go back to the previous login screen
 #
 set -euo pipefail
@@ -158,11 +158,11 @@ LOGIN="$REPO/system/nothing-login.sh"
 if ((DO_SYSTEM)) && [[ $BOOT_LOCK != no ]]; then
   step "Login screen"
   if [[ "$("$LOGIN" status)" == enabled ]]; then
-    info "boots straight into the Nothing lock screen (greetd → hyprlock)"
+    info "boots straight into the lock screen (greetd → hyprlock)"
   else
     answer=y
     if [[ $BOOT_LOCK == ask ]] && ((!YES)) && ((!DRY)) && [[ -t 0 ]]; then
-      printf '  %s?%s Boot straight into the Nothing lock screen instead of the standard login? [Y/n] ' "$R" "$N"
+      printf '  %s?%s Boot straight into the lock screen instead of the standard login? [Y/n] ' "$R" "$N"
       read -r answer
     fi
     if [[ ${answer,,} != n* ]]; then

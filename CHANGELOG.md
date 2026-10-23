@@ -79,6 +79,9 @@ project uses [Semantic Versioning](https://semver.org/).
   Shared helper `system/nothing-login.sh` (also used by Settings → Login screen).
 
 ### Fixed
+- Loading the hyprbars plugin put Hyprland into a config-reload loop until it crashed: the
+  plugin is now requested on every config run (0.56 loads plugins declaratively). Title bars
+  stay on maximised windows.
 - Settings self-test failed on an empty Bluetooth scan result.
 - Album art that isn't an image no longer crashes the island; art is fetched over http(s)
   only and capped at 5 MB.

@@ -78,10 +78,11 @@ Then **log out → choose “Hyprland” on the login screen** (not “Hyprland 
 1. installs `packages/pacman.txt` (and `packages/aur.txt` via yay, if non-empty),
 2. sets the keyboard system-wide to **Austrian German, no dead keys**, enables
    `bluetooth` + `NetworkManager`, warns about competing lockers,
-3. downloads the Nothing fonts to `~/.local/share/fonts/nothing`,
+3. unpacks Apple's SF fonts from `~/Downloads/SF-*.dmg` when present (§5 *Fonts*),
 4. **moves your existing configs to `~/.config-backup/<timestamp>/`** and symlinks
    `~/.config/<dir>` → `~/dotfiles/<dir>`, commands → `~/.local/bin`, launcher entries →
-   `~/.local/share/applications`,
+   `~/.local/share/applications`, KDE colour schemes → `~/.local/share/color-schemes`; then it
+   generates the theme (`nothing-theme apply`) and makes your private data owner-only,
 5. verifies everything and reloads the session if Hyprland is running.
 
 | Flag | Meaning |
@@ -95,13 +96,13 @@ Then **log out → choose “Hyprland” on the login screen** (not “Hyprland 
 Because configs are **symlinks**, editing `~/.config/hypr/hyprland.lua` *is* editing the repo.
 `git status` in `~/dotfiles` shows every change you made.
 
-### Login screen: boot straight into the Nothing lock screen
+### Login screen: boot straight into the lock screen
 
 A normal display manager (SDDM on EndeavourOS, Plasma Login on KDE) draws its own login
 screen before Hyprland exists, so it can never look like hyprlock. The installer therefore
 asks — and by default switches to **greetd**: it logs you in automatically and starts
 `start-hyprland -- --locked-cmd hyprlock`, so Hyprland comes up **already locked** and the
-first thing you see is the Nothing lock screen. No desktop frame is shown before hyprlock,
+first thing you see is the lock screen. No desktop frame is shown before hyprlock,
 and if hyprlock failed the session would stay locked (§9).
 
 | | |
@@ -282,13 +283,13 @@ the screen; a speaker if audio is muted; a moon while Night Shift is on.
 |---|---|
 | hover | expands after ~0.15 s, collapses ~0.5 s after you leave |
 | left-click the pill / `Super` `A` | pin it open (click again to close) |
-| right-click | open the control center |
+| right-click | open the Control Center |
 | scroll on it | previous / next workspace |
 | click a workspace dot | jump to that workspace |
 
 Expanded you get: big clock & date · weather now + 3-day forecast · calendar ·
 **media player** (follows whichever player last started playing — Spotify, Firefox,
-Chromium/YouTube, Netflix, mpv, … — art, title, artist, dot progress bar, ⏮ ⏯ ⏭, and a
+Chromium/YouTube, Netflix, mpv, … — art, title, artist, progress bar, ⏮ ⏯ ⏭, and a
 ⇄ button when several players are open) · volume slider + mute · network chip (opens Wi-Fi
 settings) · Wi-Fi and Bluetooth toggles.
 
@@ -303,7 +304,7 @@ history (✕ to dismiss, **Clear** for all) and power buttons. **Log Out / Resta
 ask twice** — the button turns red and says *Confirm?* for 2.6 s.
 Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
-### Power menu — `Super` `Shift` `X` (or click ⏻)
+### Session menu — `Super` `Shift` `X` (or the Tux menu)
 
 | Key | Action |
 |---|---|
@@ -316,9 +317,9 @@ Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
 Arrow keys + `Enter` and the mouse work too.
 
-### Settings — `Super` `I` (also “Settings” in the launcher, or right-click the tux)
+### Settings — `Super` `I` (also “Settings” in the launcher, or the Tux menu)
 
-A real settings app in the Nothing style. Every page changes things **live**:
+A settings app modelled on macOS System Settings. Every page changes things **live**:
 
 | Page | What you can do |
 |---|---|
@@ -326,12 +327,12 @@ A real settings app in the Nothing style. Every page changes things **live**:
 | **Bluetooth** | turn on the service if needed, power, scan, pair, connect, disconnect, remove; Blueman for extras |
 | **Sound** | output & input device, volume (up to 150 %), mute, test sound, mixer |
 | **Displays** | main screen, resolution & refresh rate, scale, position (left/right/above/below), VRR, on/off — with a 15-second *Keep / Revert* safety prompt |
-| **Appearance** | wallpaper gallery + your own images, window gaps, corner radius, border, inactive opacity, blur, soft glow, animations; GTK theme/icons/cursor (nwg-look) |
+| **Appearance** | light / dark, accent colour, window border, interface font, text and terminal size; desktop widgets; wallpaper gallery (add, delete your own); gaps, corner radius, border width, active / inactive opacity, blur size and passes, soft glow, animations; GTK theme/icons/cursor (nwg-look) |
 | **Night mode** | on/off, warmth, schedule with presets or exact times |
 | **Notifications** | Do Not Disturb, clear history, test notification |
 | **Keyboard & mouse** | layout + variant (all XKB layouts), key repeat, pointer speed, acceleration, natural scrolling; touchpad tap / scrolling / disable-while-typing on laptops |
 | **Power & lock** | lock / screens-off / sleep timers, warn & dim before locking, power mode (laptops), lock now |
-| **Login screen** | boot straight into the Nothing lock screen (see §2) |
+| **Login screen** | boot straight into the lock screen (see §2) |
 | **Shortcuts** | every keybinding |
 | **About** | system info, update the dotfiles, reload the desktop, edit the machine file, reset everything |
 
@@ -370,7 +371,7 @@ island while it is on.
 | Where | How |
 |---|---|
 | keys | `Super` `Ctrl` `N` toggles (Light/Dark: `Super` `Shift` `T`) |
-| control center | **NIGHT** tile |
+| Control Center | **Night Shift** tile |
 | Settings | **Night mode** page: on/off · warmth · schedule with exact times |
 | terminal | `nothing-night on\|off\|toggle`, `nothing-night temp 3500`, `nothing-night schedule 21:30 06:45`, `nothing-night schedule off`, `nothing-night status` |
 
@@ -435,12 +436,14 @@ glass isn't possible there; the menu bar, Control Center and widgets are blurred
 ### Startup
 
 Hyprland reads `hypr/hyprland.lua`; the `hyprland.start` hook launches, in order:
-PATH fix (`~/.local/bin`) → polkit agent → wallpaper (`scripts/wallpaper.sh`) → **hypridle** (`scripts/idle.sh`) → hyprsunset → swaync → **nothing-shell** → waybar (bar) →
-waybar (desktop widgets) → nwg-dock → clipboard watcher.
+PATH fix (`~/.local/bin`) → polkit agent → wallpaper (`scripts/wallpaper.sh`) → **hypridle**
+(`scripts/idle.sh`) → hyprsunset → swaync → **nothing-shell** → waybar → nwg-dock → clipboard
+watcher. If the hyprbars plugin is installed, `conf/titlebars.lua` requests it on every config
+run (Hyprland 0.56 loads plugins declaratively — skipping the call would unload it).
 
 ### nothing-shell
 
-One Python process (`~/.local/bin/nothing-shell` → `nothing-shell/nothing-shell.py`) with two
+One Python process (`~/.local/bin/nothing-shell` → `nothing-shell/nothing-shell.py`) with three
 GTK3 layer-shell windows:
 
 - `nothing-island` — **overlay** layer (so it sits above Waybar's full-width surface),
@@ -448,6 +451,8 @@ GTK3 layer-shell windows:
   frame-clock animation), then a `GtkRevealer` slides the panel down; collapsing reverses it.
 - `nothing-control` — top layer, anchored top-right. Its slide-in is a Hyprland layer
   animation (`layer_rule … animation = "slide right"`).
+- `nothing-widgets` — **bottom** layer, full screen (under windows): the desktop widgets,
+  drawn with cairo; keyboard focus only when you click into a Notes widget.
 
 It talks to the system through: **Hyprland's event socket** (`.socket2.sock` — workspace,
 window and fullscreen events), **Playerctl** (MPRIS), `wpctl` (PipeWire volume), `nmcli`,
@@ -464,8 +469,8 @@ server. History is stored in `~/.cache/nothing-shell/notifications.json` (max. 6
 nothing-shell                         # start the daemon (no-op if already running)
 nothing-shell island  open|close|toggle
 nothing-shell control open|close|toggle
-nothing-shell notif-status            # JSON for the waybar bell
 nothing-shell notif-clear
+nothing-shell widgets list|types|add TYPE [small|medium]|remove ID|TYPE|edit|done|reset
 nothing-shell reload-css              # after editing nothing-shell/style.css
 nothing-shell quit
 ```
@@ -537,14 +542,19 @@ What the desktop does to keep your data yours:
 | `~/.cache/nothing-shell/` | notification history, album-art cache |
 | `~/.config/nothing/` | **your settings** from the Settings app / `nothing-settings set` |
 | `~/.local/state/nothing/night.json` | night-mode state and schedule |
-| `/etc/greetd/config.toml` | login screen → Nothing lock screen (template: `system/greetd/config.toml`) |
+| `/etc/greetd/config.toml` | boot into the lock screen (template: `system/greetd/config.toml`) |
 | `/etc/systemd/logind.conf.d/10-nothing-laptop.conf` | laptops: power key → power menu |
 | `$XDG_RUNTIME_DIR/nothing-rotate/` | auto-rotation state (convertibles) |
 | `hypr/hyprland.local.lua`, `waybar/local.jsonc` | your machine files — inside the repo folder, git-ignored |
 | `~/.config/fontconfig/` | symlink to `fontconfig/` — SF Pro → Inter, SF Mono → JetBrains Mono fallbacks |
 | `~/.local/share/fonts/SF-Pro/` | Apple's SF fonts, unpacked by `scripts/install-sf-fonts.sh` |
-| `hypr/theme` | the active mode (git-ignored link → `themes/mac-dark` or `themes/mac-light`) |
-| `~/.config/nothing/widgets.json` | desktop widget layout (0600) |
+| `hypr/theme/` | the active theme, generated by `nothing-theme` (git-ignored) |
+| `~/.config/nothing/theme.conf` | your mode, accent and border |
+| `~/.config/nothing/widgets.json`, `notes-*.txt` | desktop widget layout and notes (0600) |
+| `~/.config/nothing/fonts.conf`, `kitty.conf` | your interface font and terminal font size (Settings → Appearance) |
+| `~/.config/nothing/files-app` | optional: pin `dolphin` or `nautilus` for `Super` `E` |
+| `~/.local/share/nothing/calendars/` | `.ics` files for the Calendar widget's agenda |
+| `~/.local/share/color-schemes/MacDark.colors`, `MacLight.colors` | links to `kde/color-schemes/` |
 | `~/.config-backup/<timestamp>/` | your configs from before the first install |
 
 ---
@@ -555,7 +565,8 @@ What the desktop does to keep your data yours:
 |---|---|
 | colours | `hypr/themes/mac-dark/` and `mac-light/` (same names in both): `palette.css` (all GTK: menu bar, island, Control Center, widgets, Settings app, dock, notifications), `palette.rasi`, `theme.lua`, `hyprlock.conf`, `kitty.conf`, `wallpaper.jpg` |
 | fonts | `hypr/themes/typography.css` (GTK), `$font_*` in the hyprlock palettes, `font-*` in the rofi palettes, `hypr/themes/fonts.conf` (fallbacks) |
-| light / dark | `nothing-theme toggle` · `Super` `Shift` `T` · Control Center · Settings → Appearance |
+| light / dark, accent, border | `nothing-theme toggle` / `accent …` / `border …` · `Super` `Shift` `T` · Control Center · Settings → Appearance |
+| desktop widgets | drag / right-click on the desktop, Settings → Appearance, `nothing-shell widgets …`; new kinds: a `Widget` subclass in `nothing-shell.py` + `WIDGET_TYPES` |
 | gaps, borders, rounding, shadows, blur, animations | **Settings → Appearance** (defaults: `hypr/conf/look.lua`; borderless windows: `borderless = true` in `theme.lua`) |
 | keybindings, default apps | `hypr/conf/keybinds.lua` (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
 | autostart, environment | `hypr/conf/autostart.lua` |
@@ -624,7 +635,7 @@ it is strict and names unknown keys. API reference: `/usr/share/hypr/stubs/hl.me
 make help        # list tasks
 make check       # lint shell (shellcheck), python (ruff), JSON/JSONC, verify hyprland.lua
 make selftest    # click every control in the Settings app (backend stubbed — changes nothing)
-make reload      # restart island, bars, popups, wallpaper, idle daemon
+make reload      # restart menu bar, shell, notifications, dock, wallpaper, idle daemon
 make update      # git pull --ff-only + relink
 ```
 
@@ -642,10 +653,12 @@ make update      # git pull --ff-only + relink
 
 ```bash
 # remove the links created by install.sh
-for d in hypr waybar swaync rofi kitty nwg-dock-hyprland nothing-shell; do
+for d in hypr waybar swaync rofi kitty nwg-dock-hyprland nothing-shell fontconfig; do
   [ -L ~/.config/$d ] && rm ~/.config/$d
 done
-rm -f ~/.local/bin/nothing-{shell,settings,power,keybinds,reload,night}
+rm -f ~/.local/bin/nothing-{shell,settings,power,keybinds,reload,night,theme,applemenu,files}
+rm -f ~/.local/share/color-schemes/Mac{Dark,Light}.colors
+sed -i '/hypr\/themes\/gtk[34].css/d' ~/.config/gtk-3.0/gtk.css ~/.config/gtk-4.0/gtk.css
 rm -rf ~/.config/nothing                       # your Settings choices
 ~/dotfiles/system/nothing-login.sh status && sudo ~/dotfiles/system/nothing-login.sh disable
 rm -f ~/.local/share/applications/nothing-{settings,power}.desktop
@@ -676,7 +689,9 @@ Packages are left installed; remove them with `sudo pacman -Rns …` if you want
 | Settings change doesn't stick after reboot | `cat ~/.config/nothing/settings.lua`; `hyprctl configerrors` |
 | Screens stay black after idle | press a key / move the mouse; or `hyprctl dispatch 'hl.dsp.dpms({ action = "on" })'` |
 | Weather shows `--` | offline or wttr.in down; `~/.config/waybar/scripts/weather.py bar` to test |
-| No album art | the player doesn't publish `mpris:artUrl` (common for browser tabs) — a dot placeholder is shown |
+| No album art | the player doesn't publish `mpris:artUrl` (common for browser tabs) — a note placeholder is shown |
+| Hyprland came back in **safe mode** (your config ignored) | it crashed and the watchdog restarted it: check `coredumpctl list Hyprland`, fix the cause, then log out and in. A plugin crash? `sudo pacman -R hyprland-plugin-hyprbars` — the title-bar module does nothing without it |
+| No title bars / traffic lights on kitty, Dolphin | `pacman -Q hyprland-plugin-hyprbars`, `hyprctl plugin list`; the plugin must match the Hyprland version |
 | Icons show as □ | Nerd fonts missing: `sudo pacman -S ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols` |
 | Text isn't SF Pro | `fc-list \| grep "SF Pro"` — empty → `scripts/install-sf-fonts.sh` (needs `7zip` and `~/Downloads/SF-Pro.dmg`); `fc-match "SF Pro Text"` must not say DejaVu → `make links`, `fc-cache -f` |
 | Glass looks flat / no blur | `hyprctl layers` shows the namespaces; each needs a `glass-…` layer rule in `hypr/conf/rules.lua`. Blur only shows over something colourful — try the default wallpaper |
@@ -698,7 +713,10 @@ user services `journalctl --user -b`.
   writer). The scripts use `grep … >/dev/null` instead.
 - **GTK3 has no monitor connector names** — nothing-shell maps `NOTHING_OUTPUT` to a GDK monitor
   by matching positions from `hyprctl monitors`.
-- **Battery** — desktops show “AC POWER” on the lock screen; laptops get a dot bar.
+- **Battery** — desktops show “AC power” on the lock screen; laptops get a dot bar.
+- **Notification banners aren't blurred** — Hyprland doesn't blur SwayNC's GTK 4 surface, so
+  they are near-opaque.
+- **hyprbars is tied to one Hyprland version** — update the plugin together with Hyprland.
 - **Session PATH** — login managers don't read `~/.bashrc`, so `~/.local/bin` is missing from
   Hyprland's PATH unless `hyprland.lua` adds it (it does). Internal calls use absolute paths
   anyway, and launcher entries are written with absolute `Exec=` paths.

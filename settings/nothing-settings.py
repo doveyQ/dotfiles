@@ -1907,7 +1907,7 @@ def gui(page):
             self.row(k, "Lock screen at boot", "Settings → Login screen.", button("Open", lambda: app.win.go("login")))
 
     class LoginPage(Page):
-        title, subtitle = "Login screen", ("Start the computer straight into the Nothing lock screen instead of the "
+        title, subtitle = "Login screen", ("Start the computer straight into the lock screen instead of the "
                                            "standard (SDDM / Plasma) login. You type your password on hyprlock.")
 
         def build(self):
@@ -1915,7 +1915,7 @@ def gui(page):
             c = self.section("At boot")
             on = login_status()
             self.sw = switch(on, self._toggle)
-            self.state = self.row(c, "Boot into the Nothing lock screen",
+            self.state = self.row(c, "Boot into the lock screen",
                                   "On — greetd starts Hyprland already locked." if on else
                                   "Off — your distribution's login screen is used.", self.sw)
             self.row(c, "Takes effect", "At the next boot. Asks for your password (administrator).")

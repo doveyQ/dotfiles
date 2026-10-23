@@ -1,4 +1,4 @@
-# nothing dotfiles — common tasks.  `make` lists them.
+# dotfiles — common tasks.  `make` lists them.
 .DEFAULT_GOAL := help
 SHELL := /usr/bin/env bash
 
@@ -22,7 +22,7 @@ check: ## Lint shell/python/json and verify hyprland.lua
 selftest: ## Click every control in the Settings app (needs a running Hyprland; changes nothing)
 	NOTHING_SETTINGS_SELFTEST=1 ./settings/nothing-settings.py
 
-reload: ## Reload the running desktop (Hyprland, island, bars, wallpaper)
+reload: ## Reload the running desktop (Hyprland, menu bar, shell, notifications, wallpaper)
 	./hypr/scripts/nothing-reload.sh
 
 update: ## Pull the latest version and relink

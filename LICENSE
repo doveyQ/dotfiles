@@ -21,5 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ---
-The Nothing dot-matrix fonts (Ndot, NType) are NOT part of this repository and
-are not covered by this license; install.sh downloads them from their own source.
+Apple's SF fonts and the WhiteSur / Papirus icon themes are NOT part of this
+repository and are not covered by this license; they keep their own licenses and
+are installed from their own sources.

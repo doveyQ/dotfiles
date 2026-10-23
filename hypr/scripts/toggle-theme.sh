@@ -45,7 +45,7 @@ case "${1:-toggle}" in
   *) usage ;;
 esac
 
-mkdir -p -m 700 "$CONF/nothing"
+mkdir -p "$CONF/nothing" && chmod 700 "$CONF/nothing"
 [[ -e $CONF/nothing/kitty.conf ]] || install -m 600 /dev/null "$CONF/nothing/kitty.conf"   # kitty includes it
 printf 'mode=%s\naccent=%s\nborder=%s\n' "$mode" "$accent" "$border" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
 

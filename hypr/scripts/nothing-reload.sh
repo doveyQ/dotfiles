@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Reload the whole Nothing desktop inside a running Hyprland (Super+Shift+R).
-cfg=~/.config
 hyprctl reload >/dev/null
 ~/.local/bin/nothing-shell quit 2>/dev/null
 pkill -x waybar; pkill -x swaync; pkill -x hyprpaper; pkill -f nwg-dock-hyprland

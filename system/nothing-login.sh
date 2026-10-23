@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boot straight into the Nothing lock screen (greetd autologin → Hyprland started locked by
+# Boot straight into the lock screen (greetd autologin → Hyprland started locked by
 # hyprlock), or go back to the previous login manager. Must run as root:
 #   sudo nothing-login.sh enable  <user>      (install.sh / Settings → Power & Lock use this)
 #   sudo nothing-login.sh disable

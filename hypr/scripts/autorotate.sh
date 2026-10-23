@@ -5,7 +5,7 @@
 # Needs iio-sensor-proxy (monitor-sensor). Rotates the screen, touchscreen and pen together.
 # state lives in the per-user runtime dir (never /tmp: its contents end up in `hyprctl eval`)
 state=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/nothing-rotate
-mkdir -p -m 700 "$state" && [[ -O $state ]] || exit 1
+mkdir -p "$state" && chmod 700 "$state" && [[ -O $state ]] || exit 1
 
 apply() {   # apply <orientation>
   local out t

@@ -3,7 +3,7 @@
 #   record.sh toggle   start/stop (select region with slurp; Esc = full main screen)
 #   record.sh status   JSON for waybar
 #   record.sh state    true/false for swaync toggle
-sig() { pkill -RTMIN+8 waybar; }   # waybar status pill shows the red dot
+sig() { pkill -RTMIN+8 waybar; }   # the menu bar shows the red dot
 focused() { hyprctl -j monitors | python3 -c 'import json,sys; print(next(m["name"] for m in json.load(sys.stdin) if m["focused"]))'; }
 case "$1" in
   toggle)

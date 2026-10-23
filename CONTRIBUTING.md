@@ -22,7 +22,7 @@ chore(ci): bump shellcheck
 ```
 
 Scopes in use: `hypr`, `hyprlock`, `hypridle`, `island`, `control`, `waybar`, `swaync`,
-`rofi`, `kitty`, `install`, `ci`, `docs`.
+`rofi`, `kitty`, `theme`, `widgets`, `settings`, `titlebars`, `notifications`, `install`, `ci`, `docs`.
 
 ## Style
 

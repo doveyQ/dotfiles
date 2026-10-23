@@ -14,7 +14,7 @@ Usage:
   nothing-shell                      start the daemon (single instance)
   nothing-shell island  toggle|open|close|pin
   nothing-shell control toggle|open|close
-  nothing-shell notif-status         JSON for the waybar bell
+  nothing-shell notif-status         JSON: notification count + Do Not Disturb
   nothing-shell notif-clear          clear notification history
   nothing-shell reload-css           re-read style.css and the theme palette (light / dark)
   nothing-shell widgets list|types|add TYPE [small|medium]|remove ID|TYPE|edit|done|reset
