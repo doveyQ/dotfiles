@@ -20,6 +20,7 @@ Usage:
   nothing-shell widgets list|types|add TYPE [small|medium]|remove ID|TYPE|edit|done|reset
   nothing-shell quit
 """
+import datetime
 import json
 import math
 import os
@@ -34,6 +35,7 @@ import time
 import urllib.parse
 import urllib.request
 from hashlib import sha1
+from zoneinfo import ZoneInfo
 
 HOME = os.path.expanduser("~")
 RUNTIME = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
@@ -49,18 +51,34 @@ WORKSPACES = range(1, int(os.environ.get("NOTHING_WORKSPACES", "10")) + 1)
 PALETTE_FILE = os.path.join(HOME, ".config", "hypr", "theme", "palette.css")
 
 
-def palette_value(name):
-    """Raw value of `@define-color <name>` in the active theme's palette.css, aliases followed."""
+def read_css(path, depth=0):
+    """A GTK stylesheet with its @import url("…") files inlined (relative to the file, as GTK
+    resolves them), so later definitions — the generated accent override — come last."""
     try:
-        with open(PALETTE_FILE) as f:
+        with open(path) as f:
             css = f.read()
     except OSError:
+        return ""
+    if depth > 3:
+        return css
+
+    def inline(m):
+        target = os.path.normpath(os.path.join(os.path.dirname(path), os.path.expanduser(m.group(1))))
+        return read_css(target, depth + 1)
+    return re.sub(r'@import\s+url\("([^"]+)"\)\s*;', inline, css)
+
+
+def palette_value(name):
+    """Raw value of `@define-color <name>` in the active theme's palette.css (last definition
+    wins, imports and aliases followed)."""
+    css = read_css(PALETTE_FILE)
+    if not css:
         return None
     for _ in range(4):   # follow aliases like `@define-color accent @blue;`
-        m = re.search(r"@define-color\s+" + re.escape(name) + r"\s+([^;]+);", css)
-        if not m:
+        found = re.findall(r"@define-color\s+" + re.escape(name) + r"\s+([^;]+);", css)
+        if not found:
             return None
-        value = m.group(1).strip()
+        value = found[-1].strip()
         if not value.startswith("@"):
             return value
         name = value[1:]
@@ -360,9 +378,10 @@ class Sys:
 
     @staticmethod
     def dark():
-        """The active theme (nothing-theme): mac-dark → True, mac-light → False."""
+        """The active mode, as written by nothing-theme to ~/.config/hypr/theme/mode."""
         try:
-            return not os.readlink(os.path.join(HOME, ".config", "hypr", "theme")).rstrip("/").endswith("light")
+            with open(os.path.join(HOME, ".config", "hypr", "theme", "mode")) as f:
+                return f.read().strip() != "light"
         except OSError:
             return True
 
@@ -599,7 +618,7 @@ class RoundedArt(Gtk.DrawingArea):
     def set_file(self, path):
         try:
             self.pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, self.size, self.size, False) if path else None
-        except GLib.Error:
+        except (GLib.Error, TypeError):
             self.pix = None
         self.queue_draw()
 
@@ -1044,6 +1063,7 @@ class Media:
         for name in self.manager.props.player_names:
             self._on_name(self.manager, name)
         self._art_url = None
+        self.art_path = None          # cached cover file (island + Now Playing widget)
 
     def _on_name(self, _m, name):
         try:
@@ -1147,11 +1167,20 @@ class Media:
             return
         self._art_url = url
         isl = self.shell.island
+
+        def show(path):
+            self.art_path = path
+            isl.art.set_file(path)
+            if self.shell.widgets:
+                self.shell.widgets.redraw_kind("media")
         if not url:
-            isl.art.set_file(None)
+            show(None)
             return
         if url.startswith("file://"):
-            isl.art.set_file(urllib.parse.unquote(url[7:]))
+            show(urllib.parse.unquote(url[7:]))
+            return
+        if not url.startswith(("https://", "http://")):   # players hand us arbitrary URLs
+            show(None)
             return
         path = os.path.join(CACHE, "art", sha1(url.encode()).hexdigest())
 
@@ -1159,13 +1188,16 @@ class Media:
             if not os.path.exists(path):
                 try:
                     req = urllib.request.Request(url, headers={"User-Agent": "nothing-shell"})
-                    with urllib.request.urlopen(req, timeout=6) as r, open(path, "wb") as f:
-                        f.write(r.read())
+                    with urllib.request.urlopen(req, timeout=6) as r:
+                        data = r.read(5 * 1024 * 1024 + 1)           # covers are small: cap at 5 MB
+                    if len(data) > 5 * 1024 * 1024:
+                        return None
+                    write_private(path, data)
                 except Exception:
                     return None
             return path
 
-        in_thread(fetch, lambda p: isl.art.set_file(p) if self._art_url == url else None)
+        in_thread(fetch, lambda p: show(p) if self._art_url == url else None)
 
 
 # ═════════════════════════════ NOTIFICATIONS ═════════════════════════════
@@ -1591,7 +1623,7 @@ def write_private(path, text):
     os.makedirs(d, mode=0o700, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=d, prefix=".tmp-")
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "wb" if isinstance(text, bytes) else "w") as f:
             os.fchmod(f.fileno(), 0o600)
             f.write(text)
         os.replace(tmp, path)
@@ -1603,15 +1635,227 @@ def write_private(path, text):
         raise
 
 
+
+# ── widget data helpers ──
+WORLD_CITIES = {
+    "classic":  [("New York", "America/New_York"), ("London", "Europe/London"), ("Tokyo", "Asia/Tokyo")],
+    "americas": [("Cupertino", "America/Los_Angeles"), ("New York", "America/New_York"), ("São Paulo", "America/Sao_Paulo")],
+    "asia":     [("Dubai", "Asia/Dubai"), ("Singapore", "Asia/Singapore"), ("Sydney", "Australia/Sydney")],
+}
+
+
+def zone_time(tz):
+    return datetime.datetime.now(ZoneInfo(tz)).timetuple()
+
+
+def zone_offset(tz):
+    now = datetime.datetime.now(ZoneInfo(tz)) if tz else datetime.datetime.now().astimezone()
+    return now.utcoffset().total_seconds()
+
+
+def day_delta(t, ref):
+    return datetime.date(t.tm_year, t.tm_mon, t.tm_mday).toordinal() - \
+        datetime.date(ref.tm_year, ref.tm_mon, ref.tm_mday).toordinal()
+
+
+def local_city():
+    zone = os.path.realpath("/etc/localtime").split("zoneinfo/")[-1]
+    return zone.split("/")[-1].replace("_", " ") if "/" in zone else "Local"
+
+
+# Agenda: .ics files (exported calendars) dropped into ~/.local/share/nothing/calendars/.
+# Parsed as plain data: single events only (no recurrence), size-capped, text never markup.
+CALENDAR_DIR = os.path.join(HOME, ".local", "share", "nothing", "calendars")
+_ICS = {"t": 0.0, "events": []}
+
+
+def _ics_time(key, val):
+    """DTSTART → (epoch, all_day): DATE, floating local time, UTC (…Z) or TZID=…"""
+    try:
+        if re.fullmatch(r"\d{8}", val):
+            return time.mktime(time.strptime(val, "%Y%m%d")), True
+        m = re.fullmatch(r"(\d{8}T\d{6})(Z?)", val)
+        if not m:
+            return None
+        naive = datetime.datetime.strptime(m.group(1), "%Y%m%dT%H%M%S")
+        if m.group(2):
+            return naive.replace(tzinfo=datetime.timezone.utc).timestamp(), False
+        tz = re.search(r"TZID=([A-Za-z0-9_+\-/]+)", key)
+        if tz:
+            try:
+                return naive.replace(tzinfo=ZoneInfo(tz.group(1))).timestamp(), False
+            except (KeyError, ValueError):
+                pass
+        return naive.timestamp(), False
+    except (ValueError, OverflowError):
+        return None
+
+
+def calendar_events():
+    if time.time() - _ICS["t"] < 60:
+        return _ICS["events"]
+    events = []
+    try:
+        names = sorted(os.listdir(CALENDAR_DIR))
+    except OSError:
+        names = []
+    for name in names[:50]:
+        path = os.path.join(CALENDAR_DIR, name)
+        if not name.lower().endswith(".ics") or not os.path.isfile(path) or os.path.getsize(path) > 5_000_000:
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                text = re.sub(r"\r?\n[ \t]", "", f.read())          # unfold continuation lines
+        except OSError:
+            continue
+        for block in re.findall(r"BEGIN:VEVENT(.*?)END:VEVENT", text, re.S)[:5000]:
+            start = summary = None
+            for line in block.splitlines():
+                key, _, val = line.partition(":")
+                field = key.split(";")[0].upper()
+                if field == "DTSTART":
+                    start = _ics_time(key, val.strip())
+                elif field == "SUMMARY":
+                    summary = re.sub(r"\\([,;\\])", r"\1", val).replace("\\n", " ").replace("\\N", " ").strip()
+            if start and summary:
+                events.append((start[0], start[1], summary[:120]))
+    events.sort()
+    _ICS.update(t=time.time(), events=events)
+    return events
+
+
+def upcoming_events(n):
+    """[(when, title)] for the next n events from today on."""
+    now = time.time()
+    today = time.localtime()
+    out = []
+    for ts, all_day, title in calendar_events():
+        t = time.localtime(ts)
+        d = day_delta(t, today)
+        if d < 0 or (not all_day and ts < now):
+            continue
+        day = "Today" if d == 0 else "Tomorrow" if d == 1 else f"{DAY_ABBR[t.tm_wday]} {t.tm_mday} {MONTH_NAMES[t.tm_mon - 1][:3]}"
+        out.append((day if all_day else f"{day}, {clock_text(t)}", title))
+        if len(out) == n:
+            break
+    return out
+
+
+def volumes():
+    """[(name, total, free)] for / and, if it's a separate filesystem, your home."""
+    out, seen = [], set()
+    for path, name in (("/", "System"), (HOME, "Home")):
+        try:
+            st, dev = os.statvfs(path), os.stat(path).st_dev
+        except OSError:
+            continue
+        if dev in seen or not st.f_blocks:
+            continue
+        seen.add(dev)
+        out.append((name, st.f_blocks * st.f_frsize, st.f_bavail * st.f_frsize))
+    return out
+
+
+def fmt_bytes(n, rate=False):
+    """macOS style: decimal units, '512 KB', '12.3 GB'."""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1000 or unit == "TB":
+            text = f"{n:.0f} {unit}" if unit in ("B", "KB") or n >= 100 else f"{n:.1f} {unit}"
+            return text + ("/s" if rate else "")
+        n /= 1000
+
+
+_BATT = {"t": 0.0, "devices": []}
+
+
+def batteries():
+    """[(name, percent, charging, kind, health)] — laptop battery from /sys, peripherals
+    (mouse, headset, keyboard, phone …) from UPower. Cached 30 s; refreshed in a thread."""
+    if time.time() - _BATT["t"] < 30:
+        return _BATT["devices"]
+    _BATT["t"] = time.time()
+
+    def read():
+        devs = []
+        for b in sorted(glob_dir("/sys/class/power_supply", "BAT")):
+            try:
+                cap = int(open(f"{b}/capacity").read())
+                status = open(f"{b}/status").read().strip()
+            except (OSError, ValueError):
+                continue
+            health = None
+            for full, design in (("energy_full", "energy_full_design"), ("charge_full", "charge_full_design")):
+                try:
+                    health = round(100 * int(open(f"{b}/{full}").read()) / int(open(f"{b}/{design}").read()))
+                    break
+                except (OSError, ValueError, ZeroDivisionError):
+                    pass
+            devs.append(("Battery", cap, status in ("Charging", "Full"), "laptop", health))
+        for path in run(["upower", "-e"], 3).splitlines():
+            if "DisplayDevice" in path or "/battery_BAT" in path:
+                continue
+            info = run(["upower", "-i", path], 3)
+            pct = re.search(r"percentage:\s+(\d+)", info)
+            if not pct:
+                continue
+            kind = next((k for k in ("mouse", "keyboard", "headset", "headphones", "phone", "gaming-input")
+                         if re.search(rf"^\s+{k}\s*$", info, re.M)), "device")
+            model = re.search(r"model:\s+(.+)", info)
+            devs.append(((model.group(1).strip() if model else kind.title())[:24], int(pct.group(1)),
+                         "state:               charging" in info, kind, None))
+        return devs[:4]
+
+    def done(devs):
+        _BATT["devices"] = devs or []
+        if Shell.instance and Shell.instance.widgets:
+            Shell.instance.widgets.redraw_kind("battery")
+    in_thread(read, done)
+    return _BATT["devices"]
+
+
+def glob_dir(base, prefix):
+    try:
+        return [os.path.join(base, n) for n in os.listdir(base) if n.startswith(prefix)]
+    except OSError:
+        return []
+
+
+def default_iface():
+    try:
+        with open("/proc/net/route") as f:
+            for line in f.readlines()[1:]:
+                parts = line.split()
+                if len(parts) > 2 and parts[1] == "00000000":
+                    return parts[0]
+    except OSError:
+        pass
+    return None
+
+
+def iface_bytes(iface):
+    try:
+        with open("/proc/net/dev") as f:
+            for line in f:
+                name, _, rest = line.partition(":")
+                if name.strip() == iface:
+                    v = rest.split()
+                    return int(v[0]), int(v[8])
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
 class Widget(Gtk.DrawingArea):
     RADIUS = 22
     KIND, NAME = "", ""
     SIZES_OK = ("small", "medium")
     OPTIONS = {}                          # option → allowed values (first = default)
+    REFRESH = 60                          # seconds between redraws
 
     def __init__(self, desk, spec):
         super().__init__()
         self.desk, self.spec = desk, spec
+        self.container = self             # what sits on the desktop (Notes wraps a text view)
         self.set_size_request(*SIZES[spec["size"]])
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK |
                         Gdk.EventMask.POINTER_MOTION_MASK | Gdk.EventMask.ENTER_NOTIFY_MASK |
@@ -1631,7 +1875,7 @@ class Widget(Gtk.DrawingArea):
 
     # ── drawing ──
     def _draw(self, _w, cr):
-        W, H = self.get_allocated_width(), self.get_allocated_height()
+        W, H = SIZES[self.spec["size"]]           # the declared size, independent of layout timing
         self.background(cr, W, H)
         self.paint(cr, W, H)
         if self.desk.editing:              # macOS edit mode: remove badge
@@ -1705,7 +1949,7 @@ class Widget(Gtk.DrawingArea):
                 return True
             self._drag = True
             self._cursor("grabbing")
-        self.desk.move_widget(self, sx + dx, sy + dy)
+        self.desk.move_widget(self.container, sx + dx, sy + dy)
         return True
 
     def _on_release(self, _w, ev):
@@ -1716,11 +1960,18 @@ class Widget(Gtk.DrawingArea):
         if dragged:
             self.desk.save_layout()
         elif not self.desk.editing:
-            self.on_click()
+            self.on_click(*ev.get_coords()[-2:])
         return True
 
-    def on_click(self):
+    def on_click(self, x, y):
         pass
+
+    def tick(self):
+        """Called every second (sampling, timers); the desk redraws every REFRESH seconds."""
+
+    def menu_items(self):
+        """Extra right-click entries: [(label, callback), …]."""
+        return []
 
 
 # condition → (sky gradient day, sky gradient night, icon layers [(glyph, colour, dx, dy, scale)])
@@ -1797,7 +2048,7 @@ class WeatherWidget(Widget):
                 draw_text(cr, f"{hi}°", f"{FONT_UI} Semi-Bold 13", cx, 102, WHITE, "center")
                 draw_text(cr, f"{lo}°", f"{FONT_UI} Medium 12", cx, 122, WHITE, "center", alpha=0.7)
 
-    def on_click(self):
+    def on_click(self, x, y):
         self.desk.shell.island.toggle("pin")
 
 
@@ -1805,19 +2056,20 @@ class ClockWidget(Widget):
     """macOS Clock widget: analog face (orange second hand) or digital. Medium shows both.
     Click: switch analog ↔ digital."""
     KIND, NAME = "clock", "Clock"
-    OPTIONS = {"style": ("analog", "digital")}
+    OPTIONS = {"style": ("analog", "digital"), "cities": ("classic", "americas", "asia")}
+    REFRESH = 1
 
-    def analog(self, cr, cx, cy, r):
+    def analog(self, cr, cx, cy, r, t=None, numbers=True):
         face = (0.11, 0.11, 0.12, 0.92) if COL["dark"] else (1, 1, 1, 0.95)
         ink = COL["fg"]
         cr.arc(cx, cy, r, 0, 2 * math.pi)
         set_rgba(cr, face)
         cr.fill()
-        for i in range(1, 13):
+        for i in range(1, 13) if numbers else ():
             a = i * math.pi / 6 - math.pi / 2
             draw_text(cr, str(i), f"{FONT_ROUNDED} Medium 11", cx + math.cos(a) * (r - 14),
                       cy + math.sin(a) * (r - 14) - 8, ink, "center")
-        for i in range(60):
+        for i in range(60) if numbers else range(0, 60, 5):
             if i % 5:
                 a = i * math.pi / 30
                 cr.move_to(cx + math.cos(a) * (r - 3), cy + math.sin(a) * (r - 3))
@@ -1825,11 +2077,11 @@ class ClockWidget(Widget):
         set_rgba(cr, ink, 0.3)
         cr.set_line_width(1)
         cr.stroke()
-        t = time.localtime()
+        t = t or time.localtime()
         mins = t.tm_min + t.tm_sec / 60
         hrs = t.tm_hour % 12 + mins / 60
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        for frac, length, width in ((hrs / 12, r * 0.5, 4.5), (mins / 60, r * 0.78, 3.5)):
+        for frac, length, width in ((hrs / 12, r * 0.5, 4.5 if numbers else 3), (mins / 60, r * 0.78, 3.5 if numbers else 2.2)):
             a = frac * 2 * math.pi - math.pi / 2
             cr.move_to(cx, cy)
             cr.line_to(cx + math.cos(a) * length, cy + math.sin(a) * length)
@@ -1857,9 +2109,19 @@ class ClockWidget(Widget):
         draw_text(cr, date_long(t), f"{FONT_UI} Medium 12", x, y + 62, COL["dim"], align)
 
     def paint(self, cr, W, H):
-        if self.spec["size"] == "medium":
-            self.analog(cr, H / 2, H / 2, H / 2 - 12)
-            self.digital(cr, H + 8, 36)
+        if self.spec["size"] == "medium":            # World Clock: here + three cities
+            here = time.localtime()
+            zones = [(local_city(), None)] + WORLD_CITIES[self.opt("cities")]
+            cw = W / len(zones)
+            for i, (name, tz) in enumerate(zones):
+                t = zone_time(tz) if tz else here
+                cx = cw * (i + 0.5)
+                self.analog(cr, cx, 62, 40, t, numbers=False)
+                draw_text(cr, name, f"{FONT_UI} Semi-Bold 11", cx, 112, COL["fg"], "center", width=cw - 6)
+                day = day_delta(t, here) if tz else 0
+                off = round((zone_offset(tz) - zone_offset(None)) / 3600) if tz else 0
+                sub = (f"Today, {off:+d}h" if tz else "Today") if day == 0 else ("Tomorrow" if day > 0 else "Yesterday")
+                draw_text(cr, sub, f"{FONT_UI} Medium 10", cx, 128, COL["dim"], "center", width=cw - 6)
         elif self.opt("style") == "digital":
             t = time.localtime()
             draw_text(cr, DAY_NAMES[t.tm_wday], f"{FONT_UI} Semi-Bold 12", 16, 16, COL["orange"])
@@ -1867,7 +2129,7 @@ class ClockWidget(Widget):
         else:
             self.analog(cr, W / 2, H / 2, min(W, H) / 2 - 12)
 
-    def on_click(self):
+    def on_click(self, x, y):
         if self.spec["size"] == "small":
             style = "digital" if self.opt("style") == "analog" else "analog"
             self.desk.set_option(self.spec["id"], "style", style)
@@ -1881,10 +2143,18 @@ class CalendarWidget(Widget):
     def paint(self, cr, W, H):
         t = time.localtime()
         red, fg, dim = COL["red"], COL["fg"], COL["dim"]
+        events = upcoming_events(2 if self.spec["size"] == "medium" else 1)
         draw_text(cr, DAY_NAMES[t.tm_wday].upper(), f"{FONT_UI} Bold 11", 18, 16, red)
-        draw_text(cr, str(t.tm_mday), f"{FONT_DISPLAY} Regular 52", 15, 28, fg)
-        draw_text(cr, MONTH_NAMES[t.tm_mon - 1], f"{FONT_UI} Semi-Bold 13", 18, 96, fg)
-        draw_text(cr, "No events today", f"{FONT_UI} Medium 11", 18, 116, dim)
+        draw_text(cr, str(t.tm_mday), f"{FONT_DISPLAY} Regular {40 if events else 52}", 15, 28, fg)
+        if events:
+            y = 84
+            for when, title in events:
+                draw_text(cr, title, f"{FONT_UI} Semi-Bold 12", 18, y, fg, width=118)
+                draw_text(cr, when, f"{FONT_UI} Medium 10", 18, y + 16, dim, width=118)
+                y += 34
+        else:
+            draw_text(cr, MONTH_NAMES[t.tm_mon - 1], f"{FONT_UI} Semi-Bold 13", 18, 96, fg)
+            draw_text(cr, "No upcoming events", f"{FONT_UI} Medium 11", 18, 116, dim)
         if self.spec["size"] != "medium":
             return
         gx, gy, cw, ch = 150, 16, (W - 150 - 14) / 7, 18
@@ -1906,7 +2176,7 @@ class CalendarWidget(Widget):
             else:
                 draw_text(cr, str(day), f"{FONT_UI} Medium 10", x, y, dim if pos % 7 >= 5 else fg, "center")
 
-    def on_click(self):
+    def on_click(self, x, y):
         self.desk.shell.island.toggle("pin")
 
 
@@ -1914,6 +2184,7 @@ class StatsWidget(Widget):
     """System widget: CPU / Memory / Disk as Activity-style rings; medium adds readouts and
     thermals. Click: Control Center."""
     KIND, NAME = "system", "System"
+    REFRESH = 3
     RINGS = (("CPU", "pink"), ("Memory", "green"), ("Disk", "teal"))
 
     def values(self):
@@ -1921,7 +2192,7 @@ class StatsWidget(Widget):
         mem, used, total = Sys.mem()
         st = os.statvfs("/")
         disk = 100 * (1 - st.f_bavail / st.f_blocks) if st.f_blocks else 0
-        return (cpu, mem, disk), (f"{cpu:.0f}%", f"{used:.1f} / {total:.0f} GB", f"{disk:.0f}%")
+        return (cpu, mem, disk), (f"{cpu:.0f}%", f"{used:.1f}/{total:.0f} GB", f"{disk:.0f}%")
 
     def rings(self, cr, cx, cy, outer, width, gap):
         vals, _ = self.values()
@@ -1947,18 +2218,422 @@ class StatsWidget(Widget):
         for i, ((name, color), txt) in enumerate(zip(self.RINGS, texts)):
             y = 16 + i * 46
             draw_text(cr, name, f"{FONT_UI} Semi-Bold 11", x, y, COL[color])
-            draw_text(cr, txt, f"{FONT_ROUNDED} Semi-Bold 17", x, y + 14, COL["fg"], width=W - x - 64)
+            draw_text(cr, txt, f"{FONT_ROUNDED} Semi-Bold 15", x, y + 14, COL["fg"], width=W - x - 52)
         for i, (k, v) in enumerate(Sys.temps().items()):
             y = 16 + i * 46
             draw_text(cr, k, f"{FONT_UI} Semi-Bold 11", W - 16, y, COL["dim"], "right")
             draw_text(cr, f"{v:.0f}°", f"{FONT_ROUNDED} Medium 15", W - 16, y + 15,
                       COL["orange"] if v >= 80 else COL["fg"], "right")
 
-    def on_click(self):
+    def on_click(self, x, y):
         self.desk.shell.control.toggle("toggle")
 
 
-WIDGET_TYPES = {c.KIND: c for c in (WeatherWidget, ClockWidget, CalendarWidget, StatsWidget)}
+class StorageWidget(Widget):
+    """“About This Mac” storage: available space and a usage bar per volume. Click: Files."""
+    KIND, NAME = "storage", "Storage"
+
+    def bar(self, cr, x, y, w, frac):
+        rounded_rect(cr, x, y, w, 10, 5)
+        set_rgba(cr, COL["track"])
+        cr.fill()
+        if frac > 0:
+            a, b = COL["blue"], COL["purple"]
+            grad = cairo.LinearGradient(x, 0, x + w * frac, 0)
+            grad.add_color_stop_rgb(0, *a[:3])
+            grad.add_color_stop_rgb(1, *b[:3])
+            rounded_rect(cr, x, y, max(10, w * frac), 10, 5)
+            cr.set_source(grad)
+            cr.fill()
+
+    def paint(self, cr, W, H):
+        vols = volumes()
+        draw_text(cr, "\U000f02ca", f"{GLYPHS} 14", 16, 14, COL["blue"])
+        draw_text(cr, "Storage", f"{FONT_UI} Semi-Bold 12", 36, 15, COL["dim"])
+        if not vols:
+            return
+        if self.spec["size"] == "small":
+            name, total, free = vols[0]
+            draw_text(cr, fmt_bytes(free), f"{FONT_DISPLAY} Semi-Bold 26", 16, 44, COL["fg"])
+            draw_text(cr, f"available of {fmt_bytes(total)}", f"{FONT_UI} Medium 11", 16, 80, COL["dim"])
+            draw_text(cr, name, f"{FONT_UI} Semi-Bold 12", 16, 112, COL["fg"])
+            self.bar(cr, 16, H - 26, W - 32, 1 - free / total)
+            return
+        y = 44
+        for name, total, free in vols[:2]:
+            draw_text(cr, name, f"{FONT_UI} Semi-Bold 13", 16, y, COL["fg"])
+            draw_text(cr, f"{fmt_bytes(free)} available of {fmt_bytes(total)}", f"{FONT_UI} Medium 11",
+                      W - 16, y + 1, COL["dim"], "right")
+            self.bar(cr, 16, y + 22, W - 32, 1 - free / total)
+            y += 54
+
+    def on_click(self, x, y):
+        spawn([os.path.join(BIN, "nothing-files"), HOME])
+
+
+class BatteryWidget(Widget):
+    """macOS Batteries widget: a ring per device (laptop, mouse, headset …); laptop health."""
+    KIND, NAME = "battery", "Batteries"
+    REFRESH = 30
+    ICONS = {"laptop": "\U000f0322", "mouse": "\U000f037d", "keyboard": "\U000f030c", "headset": "\U000f02cb",
+             "headphones": "\U000f02cb", "phone": "\U000f011c", "gaming-input": "\U000f0297", "device": "\U000f0079"}
+
+    def ring(self, cr, cx, cy, r, pct, charging, kind):
+        color = COL["green"] if charging or pct > 20 else COL["red"]
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_width(5)
+        cr.arc(cx, cy, r, 0, 2 * math.pi)
+        set_rgba(cr, color, 0.2)
+        cr.stroke()
+        cr.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * max(pct, 1) / 100)
+        set_rgba(cr, color)
+        cr.stroke()
+        draw_text(cr, self.ICONS.get(kind, self.ICONS["device"]), f"{GLYPHS} {int(r * 0.75)}", cx, cy - r * 0.48, COL["fg"], "center")
+
+    def paint(self, cr, W, H):
+        devs = batteries()
+        if not devs:
+            draw_text(cr, "\U000f06a5", f"{GLYPHS} 34", W / 2, H / 2 - 40, COL["dim"], "center")
+            draw_text(cr, "No batteries", f"{FONT_UI} Semi-Bold 13", W / 2, H / 2 + 6, COL["fg"], "center")
+            draw_text(cr, "Laptop, mouse, headset …", f"{FONT_UI} Medium 11", W / 2, H / 2 + 26, COL["dim"], "center")
+            return
+        if self.spec["size"] == "small":
+            name, pct, charging, kind, health = devs[0]
+            self.ring(cr, 44, 50, 26, pct, charging, kind)
+            draw_text(cr, f"{pct}%", f"{FONT_DISPLAY} Semi-Bold 28", 16, 92, COL["fg"])
+            sub = name + (f" · {health}% health" if health else "") + (" · charging" if charging else "")
+            draw_text(cr, sub, f"{FONT_UI} Medium 11", 16, 128, COL["dim"], width=W - 28)
+            return
+        cw = W / max(4, len(devs))
+        for i, (name, pct, charging, kind, health) in enumerate(devs):
+            cx = cw * (i + 0.5)
+            self.ring(cr, cx, 58, 30, pct, charging, kind)
+            draw_text(cr, f"{pct}%", f"{FONT_UI} Semi-Bold 14", cx, 100, COL["fg"], "center")
+            draw_text(cr, f"{health}% health" if health else name, f"{FONT_UI} Medium 10", cx, 120, COL["dim"],
+                      "center", width=cw - 8)
+
+
+class MediaWidget(Widget):
+    """Now Playing: cover, title, artist, progress, ⏮ ⏯ ⏭. Click the cover for the island."""
+    KIND, NAME = "media", "Now Playing"
+    REFRESH = 1
+
+    def __init__(self, desk, spec):
+        super().__init__(desk, spec)
+        self._art_for = None
+        self._pix = None
+        self._buttons = {}
+
+    def state(self):
+        m = self.desk.shell.media
+        p = m.active()
+        if not p:
+            return None
+        try:
+            length = int(m._meta(p, "mpris:length") or 0)
+            pos = p.get_position()
+        except (GLib.Error, ValueError):
+            length, pos = 0, 0
+        return {"title": m._meta(p, "xesam:title") or "Unknown title",
+                "artist": m._meta(p, "xesam:artist") or (p.props.player_name or "").split(".")[0].title(),
+                "playing": p.props.playback_status == Playerctl.PlaybackStatus.PLAYING,
+                "pos": pos, "len": length}
+
+    def art(self, size):
+        path = self.desk.shell.media.art_path
+        if path != self._art_for:
+            self._art_for, self._pix = path, None
+            if path:
+                try:
+                    self._pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, size, size, False)
+                except (GLib.Error, TypeError):          # not an image (TypeError: NULL pixbuf)
+                    self._pix = None
+        return self._pix
+
+    def paint(self, cr, W, H):
+        st = self.state()
+        small = self.spec["size"] == "small"
+        a = 64 if small else H - 32
+        cr.save()
+        rounded_rect(cr, 16, 16, a, a, 10)
+        cr.clip()
+        pix = self.art(a)
+        if pix:
+            Gdk.cairo_set_source_pixbuf(cr, pix, 16, 16)
+            cr.paint()
+        else:
+            set_rgba(cr, COL["fg"], 0.08)
+            cr.paint()
+            draw_text(cr, "\U000f0387", f"{GLYPHS} {int(a * 0.35)}", 16 + a / 2, 16 + a * 0.28, COL["dim"], "center")
+        cr.restore()
+        x = 16 if small else a + 30
+        tw = W - x - 16
+        ty = 92 if small else 24
+        if not st:
+            draw_text(cr, "Not Playing", f"{FONT_UI} Semi-Bold 13", x, ty, COL["fg"], width=tw)
+            draw_text(cr, "Spotify, YouTube, any player", f"{FONT_UI} Medium 11", x, ty + 18, COL["dim"], width=tw)
+            self._buttons = {}
+            return
+        draw_text(cr, st["title"], f"{FONT_UI} Semi-Bold 13", x, ty, COL["fg"], width=tw)
+        draw_text(cr, st["artist"], f"{FONT_UI} Medium 12", x, ty + 18, COL["dim"], width=tw)
+        frac = st["pos"] / st["len"] if st["len"] else 0
+        by = H - 34 if small else 78
+        if not small:
+            rounded_rect(cr, x, by, tw, 4, 2)
+            set_rgba(cr, COL["track"])
+            cr.fill()
+            if frac:
+                rounded_rect(cr, x, by, max(4, tw * min(frac, 1)), 4, 2)
+                set_rgba(cr, COL["fg"])
+                cr.fill()
+            f = lambda us: f"{us // 60_000_000}:{us // 1_000_000 % 60:02d}"  # noqa: E731
+            if st["len"]:
+                draw_text(cr, f(st["pos"]), f"{FONT_UI} Medium 10", x, by + 8, COL["dim"])
+                draw_text(cr, "-" + f(max(0, st["len"] - st["pos"])), f"{FONT_UI} Medium 10", x + tw, by + 8, COL["dim"], "right")
+        play = "\U000f03e4" if st["playing"] else "\U000f040a"
+        controls = [("play_pause", play)] if small else [("previous", "\U000f04ae"), ("play_pause", play), ("next", "\U000f04ad")]
+        bx = W - 16 - 30 * len(controls) if small else x + tw / 2 - 45
+        cy = H - 46 if small else 112
+        self._buttons = {}
+        for i, (action, glyph) in enumerate(controls):
+            cx = bx + 30 * i + 15
+            draw_text(cr, glyph, f"{GLYPHS} {22 if action == 'play_pause' else 18}", cx, cy, COL["fg"], "center")
+            self._buttons[action] = (cx - 15, cy - 4, 30, 30)
+
+    def on_click(self, x, y):
+        for action, (bx, by, bw, bh) in self._buttons.items():
+            if bx <= x <= bx + bw and by <= y <= by + bh:
+                self.desk.shell.media.do(action)
+                GLib.timeout_add(250, lambda: (self.queue_draw(), False)[1])
+                return
+        self.desk.shell.island.toggle("pin")
+
+
+class NotesFace(Widget):
+    """Background + header of the Notes widget (the text view sits on top of it)."""
+    KIND, NAME = "notes", "Notes"
+    REFRESH = 3600
+
+    def paint(self, cr, W, H):
+        draw_text(cr, "\U000f039e", f"{GLYPHS} 14", 16, 13, COL["yellow"])
+        draw_text(cr, "Notes", f"{FONT_UI} Semi-Bold 13", 36, 14, COL["fg"])
+        cr.move_to(16, 38)
+        cr.line_to(W - 16, 38)
+        set_rgba(cr, COL["line"])
+        cr.set_line_width(1)
+        cr.stroke()
+
+
+class NotesWidget(Gtk.Overlay):
+    """Quick Notes: a scratchpad you can type into, saved to ~/.config/nothing/notes-<id>.txt
+    (0600, max 32 KB). Drag it by its header."""
+    KIND, NAME = "notes", "Notes"
+    SIZES_OK = ("small", "medium")
+    OPTIONS = {}
+    REFRESH = 3600
+    LIMIT = 32 * 1024
+
+    def __init__(self, desk, spec):
+        super().__init__()
+        self.desk, self.spec = desk, spec
+        self.face = NotesFace(desk, spec)
+        self.face.container = self
+        self.add(self.face)
+        self.path = os.path.join(HOME, ".config", "nothing", f"notes-{spec['id']}.txt")
+        self.view = Gtk.TextView()
+        self.view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.view.set_left_margin(16)
+        self.view.set_right_margin(16)
+        self.view.set_top_margin(4)
+        add_cls(self.view, "note-text")
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_margin_top(42)
+        scroll.set_margin_bottom(12)
+        add_cls(scroll, "note-scroll")
+        scroll.add(self.view)
+        self.add_overlay(scroll)
+        try:
+            with open(self.path, encoding="utf-8", errors="replace") as f:
+                self.view.get_buffer().set_text(f.read(self.LIMIT))
+        except OSError:
+            pass
+        self._save_t = None
+        self.view.get_buffer().connect("changed", self._changed)
+        self.set_size_request(*SIZES[spec["size"]])
+        self.show_all()
+
+    def opt(self, key):
+        return None
+
+    def tick(self):
+        pass
+
+    def menu_items(self):
+        return [("Clear Note", lambda: self.view.get_buffer().set_text(""))]
+
+    def queue_draw(self):
+        self.face.queue_draw()
+
+    def _changed(self, buf):
+        if self._save_t:
+            GLib.source_remove(self._save_t)
+        self._save_t = GLib.timeout_add(700, self._save)
+
+    def _save(self):
+        self._save_t = None
+        buf = self.view.get_buffer()
+        text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False)[:self.LIMIT]
+        try:
+            write_private(self.path, text)
+        except OSError as e:
+            print("notes:", e, file=sys.stderr)
+        return False
+
+
+class NetworkWidget(Widget):
+    """Network throughput: live download / upload with a 60 s graph."""
+    KIND, NAME = "network", "Network"
+    REFRESH = 1
+
+    def __init__(self, desk, spec):
+        super().__init__(desk, spec)
+        self.down, self.up = [0.0] * 60, [0.0] * 60
+        self._last = None
+
+    def tick(self):
+        iface = default_iface()
+        now = time.monotonic()
+        cur = iface_bytes(iface) if iface else None
+        if cur and self._last and self._last[0] == iface:
+            dt = max(0.2, now - self._last[1])
+            self.down = self.down[1:] + [max(0, (cur[0] - self._last[2][0]) / dt)]
+            self.up = self.up[1:] + [max(0, (cur[1] - self._last[2][1]) / dt)]
+        self._last = (iface, now, cur) if cur else None
+        self.iface = iface
+
+    def graph(self, cr, x, y, w, h, values, peak, color, fill):
+        n = len(values)
+        pts = [(x + i * w / (n - 1), y + h - h * min(v / peak, 1)) for i, v in enumerate(values)]
+        cr.move_to(*pts[0])
+        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+            mx = (x0 + x1) / 2
+            cr.curve_to(mx, y0, mx, y1, x1, y1)
+        path = cr.copy_path()
+        if fill:
+            cr.line_to(x + w, y + h)
+            cr.line_to(x, y + h)
+            cr.close_path()
+            grad = cairo.LinearGradient(0, y, 0, y + h)
+            grad.add_color_stop_rgba(0, color[0], color[1], color[2], 0.40)
+            grad.add_color_stop_rgba(1, color[0], color[1], color[2], 0.02)
+            cr.set_source(grad)
+            cr.fill()
+        cr.append_path(path)
+        cr.set_line_width(1.6)
+        set_rgba(cr, color)
+        cr.stroke()
+
+    def paint(self, cr, W, H):
+        iface = getattr(self, "iface", None)
+        draw_text(cr, "\U000f04e2", f"{GLYPHS} 14", 16, 14, COL["teal"])
+        draw_text(cr, iface or "Offline", f"{FONT_UI} Semi-Bold 12", 36, 15, COL["dim"], width=W - 52)
+        d, u = self.down[-1], self.up[-1]
+        small = self.spec["size"] == "small"
+        draw_text(cr, "\U000f0045 " + fmt_bytes(d, True), f"{FONT_ROUNDED} Semi-Bold {15 if small else 17}", 16, 40, COL["blue"])
+        draw_text(cr, "\U000f005d " + fmt_bytes(u, True), f"{FONT_ROUNDED} Semi-Bold {15 if small else 17}",
+                  16 if small else W / 2, 62 if small else 40, COL["orange"])
+        peak = max(max(self.down), max(self.up), 50_000)
+        gy = 92 if small else 74
+        self.graph(cr, 16, gy, W - 32, H - gy - 16, self.down, peak, COL["blue"], True)
+        self.graph(cr, 16, gy, W - 32, H - gy - 16, self.up, peak, COL["orange"], False)
+
+
+class PomodoroWidget(Widget):
+    """Focus timer: 25 / 5 (or 50 / 10) minutes. Click: start / pause. Right-click: reset, skip."""
+    KIND, NAME = "pomodoro", "Focus Timer"
+    OPTIONS = {"length": ("25", "50")}
+    REFRESH = 1
+
+    def __init__(self, desk, spec):
+        super().__init__(desk, spec)
+        self.phase, self.running, self.done = "focus", False, 0
+        self.left = self.total()
+
+    def total(self):
+        work = int(self.opt("length"))
+        return (work if self.phase == "focus" else work // 5) * 60
+
+    def tick(self):
+        if not self.running:
+            return
+        self.left -= 1
+        if self.left <= 0:
+            if self.phase == "focus":
+                self.done += 1
+                spawn(["notify-send", "-a", "Focus Timer", "-i", "alarm-symbolic", "Time for a break",
+                       f"{int(self.opt('length')) // 5} minutes — stand up, look away from the screen."])
+                self.phase = "break"
+            else:
+                spawn(["notify-send", "-a", "Focus Timer", "-i", "alarm-symbolic", "Break's over", "Ready for the next session."])
+                self.phase = "focus"
+            self.left = self.total()
+
+    def reset(self):
+        self.phase, self.running = "focus", False
+        self.left = self.total()
+        self.queue_draw()
+
+    def skip(self):
+        self.left = 1
+        self.running = True
+        self.tick()
+        self.running = False
+        self.queue_draw()
+
+    def menu_items(self):
+        return [("Start" if not self.running else "Pause", lambda: self.on_click(0, 0)),
+                ("Reset Timer", self.reset), ("Skip to " + ("Break" if self.phase == "focus" else "Focus"), self.skip)]
+
+    def paint(self, cr, W, H):
+        color = COL["red"] if self.phase == "focus" else COL["green"]
+        small = self.spec["size"] == "small"
+        cx, cy, r = (W / 2, 76, 52) if small else (82, H / 2, 58)
+        frac = 1 - self.left / self.total()
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_width(10)
+        cr.arc(cx, cy, r, 0, 2 * math.pi)
+        set_rgba(cr, color, 0.2)
+        cr.stroke()
+        if frac > 0:
+            cr.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * frac)
+            set_rgba(cr, color)
+            cr.stroke()
+        m, sec = divmod(max(self.left, 0), 60)
+        draw_text(cr, f"{m}:{sec:02d}", f"{FONT_ROUNDED} Semi-Bold 22", cx, cy - 16, COL["fg"], "center")
+        draw_text(cr, "\U000f040a" if not self.running else "\U000f03e4", f"{GLYPHS} 11", cx, cy + 18, COL["dim"], "center")
+        label = "Focus" if self.phase == "focus" else "Break"
+        if small:
+            draw_text(cr, label, f"{FONT_UI} Semi-Bold 12", W / 2, H - 26, color, "center")
+            return
+        x = 164
+        draw_text(cr, label, f"{FONT_UI} Bold 15", x, 30, color)
+        draw_text(cr, f"{self.done} session{'s' if self.done != 1 else ''} today", f"{FONT_UI} Medium 12", x, 54, COL["fg"])
+        draw_text(cr, "Click to " + ("pause" if self.running else "start"), f"{FONT_UI} Medium 11", x, 76, COL["dim"])
+        draw_text(cr, f"{self.opt('length')} min focus · {int(self.opt('length')) // 5} min break", f"{FONT_UI} Medium 11",
+                  x, 96, COL["dim"])
+
+    def on_click(self, x, y):
+        self.running = not self.running
+        self.queue_draw()
+
+
+WIDGET_TYPES = {c.KIND: c for c in (WeatherWidget, ClockWidget, CalendarWidget, StatsWidget, StorageWidget,
+                                     BatteryWidget, MediaWidget, NotesWidget, NetworkWidget, PomodoroWidget)}
+
+
+OPTION_LABELS = {"classic": "New York · London · Tokyo", "americas": "Cupertino · New York · São Paulo",
+                 "asia": "Dubai · Singapore · Sydney", "25": "25 / 5 minutes", "50": "50 / 10 minutes"}
 
 
 def clean_widgets(items):
@@ -2006,8 +2681,9 @@ class Widgets(LayerWindow):
 
     def __init__(self, shell):
         E = GtkLayerShell.Edge
+        # keyboard on demand: only once you click into a Notes widget
         super().__init__("nothing-widgets", [E.TOP, E.BOTTOM, E.LEFT, E.RIGHT], {},
-                         layer=GtkLayerShell.Layer.BOTTOM)
+                         keyboard=True, layer=GtkLayerShell.Layer.BOTTOM)
         self.shell = shell
         self.editing = False
         self.items = {}                   # id → Widget
@@ -2151,12 +2827,19 @@ class Widgets(LayerWindow):
         return it
 
     def _add_menu(self):
+        """The widget gallery: one entry per kind, sizes in a submenu."""
         m = Gtk.Menu()
         add_cls(m, "desk-menu")
         full = len(self.specs) >= MAX_WIDGETS
         for kind, cls_ in WIDGET_TYPES.items():
+            it = Gtk.MenuItem(label=cls_.NAME)
+            it.set_sensitive(not full)
+            sub = Gtk.Menu()
+            add_cls(sub, "desk-menu")
             for size in cls_.SIZES_OK:
-                self._item(m, f"{cls_.NAME} — {size.title()}", lambda k=kind, s=size: self.add_widget(k, s), not full)
+                self._item(sub, size.title(), lambda k=kind, s=size: self.add_widget(k, s))
+            it.set_submenu(sub)
+            m.append(it)
         return m
 
     def _desktop_items(self, m):
@@ -2176,12 +2859,15 @@ class Widgets(LayerWindow):
             mark = "✓  " if w.spec["size"] == size else "     "
             self._item(m, mark + size.title(), lambda s=size: self.resize_widget(w.spec["id"], s))
         for key, values in cls_.OPTIONS.items():
-            if w.spec["size"] != "small":
-                break
             m.append(Gtk.SeparatorMenuItem())
             for v in values:
                 mark = "✓  " if w.opt(key) == v else "     "
-                self._item(m, mark + v.title(), lambda k=key, v=v: self.set_option(w.spec["id"], k, v))
+                self._item(m, mark + OPTION_LABELS.get(v, v.title()), lambda k=key, v=v: self.set_option(w.spec["id"], k, v))
+        extra = self.items[w.spec["id"]].menu_items() if w.spec["id"] in self.items else []
+        if extra:
+            m.append(Gtk.SeparatorMenuItem())
+            for label_, cb in extra:
+                self._item(m, label_, cb)
         m.append(Gtk.SeparatorMenuItem())
         self._item(m, f"Remove “{cls_.NAME}”", lambda: self.remove_widget(w.spec["id"]))
         m.append(Gtk.SeparatorMenuItem())
@@ -2202,26 +2888,33 @@ class Widgets(LayerWindow):
 
     def _tick(self):
         self._n += 1
-        for w in self.items.values():
-            if isinstance(w, ClockWidget):
-                w.queue_draw()
-            elif isinstance(w, StatsWidget) and self._n % 3 == 0:
-                w.queue_draw()
-            elif self._n % 60 == 0:
+        for w in list(self.items.values()):
+            try:
+                w.tick()
+            except Exception as e:          # one broken widget must not stop the others
+                print(f"widget {w.spec['id']}:", e, file=sys.stderr)
+            if self._n % w.REFRESH == 0:
                 w.queue_draw()
         return True
 
-    def redraw_weather(self):
+    def redraw_kind(self, kind):
         for w in self.items.values():
-            if isinstance(w, WeatherWidget):
+            if w.spec["type"] == kind:
                 w.queue_draw()
+
+    def redraw_weather(self):
+        self.redraw_kind("weather")
 
 
 # ═════════════════════════════ SHELL ═════════════════════════════
 class Shell:
+    instance = None
+
     def __init__(self):
+        Shell.instance = self
         self.island = None
         self.control = None
+        self.widgets = None
         self.notifs = None
         self.cpu_hist = [0.0] * 40
         self.cpu_last = 0.0

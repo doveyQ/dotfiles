@@ -284,3 +284,11 @@ menu menuitem:hover label { color: @on_accent; }
 menu menuitem:disabled label { color: @mute; }
 menu separator { background: @line; min-height: 1px; margin: 4px 6px; }
 menu arrow { color: @dim; }
+
+/* Notes widget: the text view sits on the widget's glass */
+.note-scroll, .note-scroll viewport, textview.note-text, textview.note-text text {
+  background: transparent;
+  color: @fg;
+}
+textview.note-text { font-size: 13px; caret-color: @accent; }
+textview.note-text text selection { background: alpha(@accent, 0.35); color: @fg; }
