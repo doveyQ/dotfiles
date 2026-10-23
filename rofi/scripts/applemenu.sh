@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# The Apple menu (click the  in the menu bar): About · Settings · Force Quit · Sleep ·
-# Restart · Shut Down · Lock · Log Out — like macOS.
+# The system menu (click Tux in the menu bar), like macOS's Apple menu: About · Settings ·
+# Force Quit · Clear Clipboard History · Sleep · Restart · Shut Down · Lock · Log Out.
 theme=~/.config/rofi/applemenu.rasi
 bin=~/.local/bin
 pidof rofi >/dev/null && { pkill -x rofi; exit 0; }
 
 sep=$'──────────────────────\0nonselectable\x1ftrue'
-choice=$(printf '%s\n' "About This Computer" "System Settings…" "$sep" "Force Quit Window" "$sep" \
+choice=$(printf '%s\n' "About This Computer" "System Settings…" "$sep" "Force Quit Window" "Clear Clipboard History" "$sep" \
   "Sleep" "Restart…" "Shut Down…" "$sep" "Lock Screen" "Log Out…" |
   rofi -dmenu -i -no-custom -format s -theme "$theme" -p "")
 
@@ -20,6 +20,8 @@ case "$choice" in
   "Force Quit Window")
     pid=$(hyprctl activewindow -j | python3 -c 'import json,sys; print(json.load(sys.stdin).get("pid", ""))')
     [[ $pid =~ ^[0-9]+$ ]] && kill -9 "$pid" ;;
+  "Clear Clipboard History")
+    cliphist wipe && wl-copy --clear && notify-send -a Clipboard "Clipboard history cleared" ;;
   "Sleep")       loginctl lock-session; sleep 0.6; systemctl suspend ;;
   "Restart…")    confirm "Restart Now" && systemctl reboot ;;
   "Shut Down…")  confirm "Shut Down Now" && systemctl poweroff ;;

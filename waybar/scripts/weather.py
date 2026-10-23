@@ -33,8 +33,10 @@ def fetch():
         with urllib.request.urlopen(req, timeout=8) as r:
             data = json.load(r)
         os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-        with open(CACHE, "w") as f:
+        fd = os.open(CACHE + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)  # location: owner only
+        with os.fdopen(fd, "w") as f:
             json.dump(data, f)
+        os.replace(CACHE + ".tmp", CACHE)
         return data
     except Exception:
         try:

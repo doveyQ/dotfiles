@@ -226,6 +226,12 @@ for name in "${!BINS[@]}"; do
   run chmod +x "$REPO/${BINS[$name]}"
   place "$REPO/${BINS[$name]}" "$BIN/$name"
 done
+# private data stays owner-only: settings (Hyprland executes settings.lua), clipboard
+# history, notification history, widget layout, weather location
+for d in "$CONFIG/nothing" "$HOME/.cache/nothing-shell" "$HOME/.cache/cliphist"; do
+  [[ -d $d ]] && run chmod -R go-rwx "$d"
+done
+[[ -f $HOME/.cache/nothing-weather.json ]] && run chmod 600 "$HOME/.cache/nothing-weather.json"
 # launcher entries: generated with absolute paths (the session PATH may lack ~/.local/bin)
 for f in "$REPO"/applications/*.desktop; do
   dst="$APPS/$(basename "$f")"

@@ -1,4 +1,4 @@
-/* Apple menu — the dropdown under the  in the menu bar */
+/* System menu — the dropdown under Tux in the menu bar */
 @import "~/.config/hypr/theme/palette.rasi"
 
 configuration { show-icons: false; hover-select: true; me-select-entry: ""; me-accept-entry: "MousePrimary"; }
@@ -12,7 +12,7 @@ window {
   padding: 5px;
 }
 mainbox  { children: [ listview ]; }
-listview { lines: 11; fixed-height: false; scrollbar: false; spacing: 0; dynamic: true; }
+listview { lines: 12; fixed-height: false; scrollbar: false; spacing: 0; dynamic: true; }
 element  { padding: 5px 10px; border-radius: 6px; cursor: pointer; }
 element normal.normal, element alternate.normal { background-color: transparent; }
 element selected.normal { background-color: @accent; text-color: @on-accent; }

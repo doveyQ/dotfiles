@@ -34,7 +34,9 @@ return function(ctx)
         hl.exec_cmd(bin .. "/nothing-shell")                      -- island, Control Center, desktop widgets
         hl.exec_cmd("waybar")                                     -- the menu bar
         hl.exec_cmd("nwg-dock-hyprland -d -i 36 -mb 10 " .. (machine.main and ("-o " .. machine.main) or "") .. " -s nothing.css")
-        hl.exec_cmd("wl-paste --watch cliphist store")
+        -- clipboard history: capped; entries that password managers mark as secret
+        -- (x-kde-passwordManagerHint → CLIPBOARD_STATE=sensitive) are never stored
+        hl.exec_cmd("wl-paste --watch cliphist -max-items 200 store")
         hl.exec_cmd(scripts .. "/battery-warn.sh")                -- low-battery popups (exits without a battery)
     end)
 end

@@ -3,12 +3,14 @@
 #   autorotate.sh daemon <output>   follow the accelerometer (started from hyprland.local.lua)
 #   autorotate.sh tablet on|off     from the tablet-mode switch binds
 # Needs iio-sensor-proxy (monitor-sensor). Rotates the screen, touchscreen and pen together.
-state=${XDG_RUNTIME_DIR:-/tmp}/nothing-rotate
-mkdir -p "$state"
+# state lives in the per-user runtime dir (never /tmp: its contents end up in `hyprctl eval`)
+state=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/nothing-rotate
+mkdir -p -m 700 "$state" && [[ -O $state ]] || exit 1
 
 apply() {   # apply <orientation>
   local out t
   out=$(<"$state/output") || return
+  [[ $out =~ ^[A-Za-z0-9_.-]{1,32}$ ]] || return   # a connector name, nothing that could be Lua
   case "$1" in
     normal) t=0 ;; left-up) t=1 ;; bottom-up) t=2 ;; right-up) t=3 ;; *) return ;;
   esac
