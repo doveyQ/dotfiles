@@ -19,6 +19,7 @@ CLI — every setting in the app can also be read and written here
 Your choices are stored in ~/.config/nothing/ (settings.json + generated settings.lua,
 hypridle.conf, hyprpaper.conf) — outside the dotfiles repo, so `git status` stays clean.
 """
+import html
 import json
 import os
 import re
@@ -182,11 +183,14 @@ SCHEMA = {
     "touchpad.natural_scroll":     ("input:touchpad:natural_scroll", bool, False),
     "touchpad.tap_to_click":       ("input:touchpad:tap_to_click", bool, True),
     "touchpad.disable_while_typing": ("input:touchpad:disable_while_typing", bool, True),
-    "appearance.gaps_in":          ("general:gaps_in", int, 6),
-    "appearance.gaps_out":         ("general:gaps_out", int, 12),
+    "appearance.gaps_in":          ("general:gaps_in", int, 5),
+    "appearance.gaps_out":         ("general:gaps_out", int, 10),
     "appearance.border":           ("general:border_size", int, 1),
     "appearance.rounding":         ("decoration:rounding", int, 14),
-    "appearance.inactive_opacity": ("decoration:inactive_opacity", float, 0.96),
+    "appearance.active_opacity":   ("decoration:active_opacity", float, 0.96),
+    "appearance.inactive_opacity": ("decoration:inactive_opacity", float, 0.90),
+    "appearance.blur_size":        ("decoration:blur:size", int, 8),
+    "appearance.blur_passes":      ("decoration:blur:passes", int, 4),
     "appearance.blur":             ("decoration:blur:enabled", bool, True),
     "appearance.glow":             ("decoration:glow:enabled", bool, False),
     "appearance.animations":       ("animations:enabled", bool, True),
@@ -513,15 +517,133 @@ def dnd_get():
 
 
 def theme_mode():
-    """'dark' or 'light' — the active theme link ~/.config/hypr/theme (nothing-theme)."""
-    return "light" if os.path.realpath(os.path.join(HYPR, "theme")).endswith("light") else "dark"
+    """'dark' or 'light' — written by nothing-theme to ~/.config/hypr/theme/mode."""
+    try:
+        with open(os.path.join(HYPR, "theme", "mode")) as f:
+            return "light" if f.read().strip() == "light" else "dark"
+    except OSError:
+        return "dark"
 
 
 def theme_set(mode):
     run([os.path.join(BIN, "nothing-theme"), mode], timeout=20)
 
 
-WIDGET_KINDS = (("weather", "Weather"), ("clock", "Clock"), ("calendar", "Calendar"), ("system", "System"))
+# ── appearance backends: accent, border, fonts, text size, terminal, wallpapers ──
+ACCENTS = (("blue", "Blue", "#007AFF"), ("purple", "Purple", "#AF52DE"), ("pink", "Pink", "#FF2D55"),
+           ("red", "Red", "#FF3B30"), ("orange", "Orange", "#FF9500"), ("yellow", "Yellow", "#FFCC00"),
+           ("green", "Green", "#34C759"), ("graphite", "Graphite", "#8E8E93"))
+BORDERS = (("hairline", "Hairline"), ("accent", "Accent colour"), ("graphite", "Graphite"), ("none", "None"))
+UI_FONTS = ("SF Pro", "SF Pro Rounded", "Inter", "Cantarell")
+FONT_OVERRIDE = os.path.join(CONF, "fonts.conf")          # included by fontconfig/fonts.conf
+KITTY_OVERRIDE = os.path.join(CONF, "kitty.conf")         # included by kitty/kitty.conf
+
+
+def theme_state():
+    """{'mode', 'accent', 'border'} from ~/.config/nothing/theme.conf (written by nothing-theme)."""
+    st = {"mode": "dark", "accent": "blue", "border": "hairline"}
+    try:
+        with open(os.path.join(CONF, "theme.conf")) as f:
+            for line in f:
+                k, _, v = line.strip().partition("=")
+                if k in st and re.fullmatch(r"[a-z]+", v):
+                    st[k] = v
+    except OSError:
+        pass
+    return st
+
+
+def theme_accent(name):
+    run([os.path.join(BIN, "nothing-theme"), "accent", name], timeout=20)
+
+
+def theme_border(name):
+    run([os.path.join(BIN, "nothing-theme"), "border", name], timeout=20)
+
+
+def font_families():
+    return sorted({f.strip() for line in out(["fc-list", ":", "family"]).splitlines()
+                   for f in line.split(",") if f.strip()}, key=str.lower)
+
+
+def ui_font_get():
+    try:
+        with open(FONT_OVERRIDE) as f:
+            m = re.search(r"<!-- ui-font: (.+?) -->", f.read())
+            return html.unescape(m.group(1)) if m else "SF Pro"
+    except OSError:
+        return "SF Pro"
+
+
+def ui_font_set(family):
+    """Swap the UI font everywhere at once: a fontconfig rule maps SF Pro Text / Display to the
+    chosen family (only installed families are accepted). Surfaces restart to pick it up."""
+    if family == "SF Pro":
+        try:
+            os.remove(FONT_OVERRIDE)
+        except OSError:
+            pass
+    else:
+        if family not in font_families():
+            raise RuntimeError(f"Font not installed: {family}")
+        fam = html.escape(family, quote=True)
+        rules = "".join(f"""  <match target="pattern">
+    <test qual="any" name="family"><string>{sf}</string></test>
+    <edit name="family" mode="prepend" binding="strong"><string>{fam}</string></edit>
+  </match>
+""" for sf in ("SF Pro Text", "SF Pro Display"))
+        atomic_write(FONT_OVERRIDE, f"""<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+<!-- Generated by nothing-settings (Settings → Appearance → Fonts). -->
+<!-- ui-font: {fam} -->
+<fontconfig>
+{rules}</fontconfig>
+""")
+    spawn([os.path.join(HYPR, "scripts", "nothing-reload.sh")])
+
+
+def text_scale_get():
+    try:
+        return float(out(["gsettings", "get", "org.gnome.desktop.interface", "text-scaling-factor"]) or 1.0)
+    except ValueError:
+        return 1.0
+
+
+def text_scale_set(factor):
+    """GTK / libadwaita text size; nothing-theme scales the KDE / Qt fonts to match."""
+    factor = max(0.8, min(1.5, float(factor)))
+    run(["gsettings", "set", "org.gnome.desktop.interface", "text-scaling-factor", f"{factor:.2f}"])
+    spawn([os.path.join(BIN, "nothing-theme"), "apply"])
+
+
+def terminal_font_get():
+    try:
+        with open(KITTY_OVERRIDE) as f:
+            m = re.search(r"^font_size\s+([\d.]+)", f.read(), re.M)
+            return float(m.group(1)) if m else 12.0
+    except (OSError, ValueError):
+        return 12.0
+
+
+def terminal_font_set(size):
+    size = max(8.0, min(28.0, float(size)))
+    atomic_write(KITTY_OVERRIDE, f"# Generated by nothing-settings (Settings → Appearance → Fonts)\nfont_size {size:.1f}\n")
+    run(["pkill", "-USR1", "-x", "kitty"])
+
+
+def wallpaper_delete(path):
+    """Delete one of *your* wallpapers (~/.local/share/nothing/wallpapers) — never anything else."""
+    real, mine = os.path.realpath(path), os.path.realpath(WALL_DIRS[1])
+    if os.path.dirname(real) != mine or not os.path.isfile(real):
+        raise RuntimeError("Only your own wallpapers can be deleted")
+    if os.path.realpath(store().get("appearance.wallpaper")) == real:
+        reset_setting("appearance.wallpaper")
+    os.remove(real)
+
+
+WIDGET_KINDS = (("weather", "Weather"), ("clock", "Clock & World Clock"), ("calendar", "Calendar & Agenda"),
+                ("system", "System (CPU · Memory · Disk)"), ("storage", "Storage"), ("battery", "Batteries"),
+                ("media", "Now Playing"), ("notes", "Notes"), ("network", "Network"), ("pomodoro", "Focus Timer"))
 
 
 def widgets_present():
@@ -1248,7 +1370,7 @@ def gui(page):
             bg(lambda: (bt_powered(), bt_scan()), self._fill)
 
         def _fill(self, res):
-            powered, devs = res
+            powered, devs = res[0], res[1] or []
             self.scan_btn.set_label("Scan")
             self.scan_btn.set_sensitive(powered)
             self.power_sw.set_state(powered)
@@ -1425,7 +1547,7 @@ def gui(page):
             GLib.timeout_add(1200, lambda: (self.rebuild(), False)[1])
 
     class AppearancePage(Page):
-        title, subtitle = "Appearance", "Wallpaper, gaps, corners, blur and animation."
+        title, subtitle = "Appearance", "Light & dark, accent colour, fonts, wallpaper, windows and blur."
 
         def build(self):
             self.header()
@@ -1438,6 +1560,32 @@ def gui(page):
                 self.mode_btns[m] = b
             self._mark_mode(theme_mode())
             self.row(a, "Light or dark", "Menu bar, Control Center, widgets, apps and wallpaper · Super+Shift+T", seg)
+            st = theme_state()
+            dots = Gtk.Box(spacing=8)
+            self.accent_btns = {}
+            for key, name, _hex in ACCENTS:
+                b = Gtk.Button()
+                cls(b, "accent-dot", key)
+                b.set_tooltip_text(name)
+                b.set_valign(Gtk.Align.CENTER)
+                b.connect("clicked", lambda _b, k=key: self._accent(k))
+                dots.pack_start(b, False, False, 0)
+                self.accent_btns[key] = b
+            self._mark_accent(st["accent"])
+            self.row(a, "Accent colour", "Selections, switches, toggles, highlights — GTK, KDE and the shell", dots)
+            self.row(a, "Window border", None,
+                     combo(BORDERS, st["border"], lambda v: bg(lambda: theme_border(v))))
+
+            ft = self.section("Fonts")
+            fams = font_families()
+            items = [(f, f) for f in UI_FONTS if f == "SF Pro" or f in fams]
+            items += [(f, f) for f in fams if f not in UI_FONTS and not f.startswith(("SF Pro", "Symbols"))]
+            self.row(ft, "Interface font", "Menu bar, widgets, apps, notifications — everything set in SF Pro",
+                     combo(items, ui_font_get(), lambda v: bg(lambda: ui_font_set(v), lambda _r: app.win.toast("Font changed"))))
+            self.row(ft, "Text size", "Apps (GTK, KDE / Qt). 1.00 = normal",
+                     slider(0.8, 1.5, 0.05, text_scale_get(), lambda v: bg(lambda: text_scale_set(v)), digits=2))
+            self.row(ft, "Terminal font size", "kitty — applies to open windows",
+                     slider(8, 24, 0.5, terminal_font_get(), lambda v: bg(lambda: terminal_font_set(v)), digits=1))
             wd = self.section("Desktop widgets")
             present = widgets_present()
             for kind, name in WIDGET_KINDS:
@@ -1474,12 +1622,22 @@ def gui(page):
                         cls(b, "current")
                     b.set_tooltip_text(f)
                     b.connect("clicked", lambda _b, p=p: self._wall(p))
-                    flow.add(b)
+                    tile = Gtk.Overlay()
+                    tile.add(b)
+                    if d == WALL_DIRS[1]:                       # your own: deletable
+                        x = Gtk.Button(label="×")
+                        cls(x, "wall-del")
+                        x.set_tooltip_text("Delete wallpaper")
+                        x.set_halign(Gtk.Align.END)
+                        x.set_valign(Gtk.Align.START)
+                        x.connect("clicked", lambda _b, p=p: self._delete(p))
+                        tile.add_overlay(x)
+                    flow.add(tile)
             r = Gtk.ListBoxRow()
             r.set_activatable(False)
             r.add(flow)
             c.add(r)
-            self.row(c, "Add your own", "Copies the image to ~/.local/share/nothing/wallpapers.",
+            self.row(c, "Add your own", "Copied to ~/.local/share/nothing/wallpapers · × deletes one of yours",
                      button("Choose image…", self._add))
             w = self.section("Windows")
             for key, title, lo, hi, step, digits in (
@@ -1487,14 +1645,17 @@ def gui(page):
                     ("appearance.gaps_out", "Gap to screen edges", 0, 60, 1, 0),
                     ("appearance.rounding", "Corner radius", 0, 40, 1, 0),
                     ("appearance.border", "Border width", 0, 6, 1, 0),
-                    ("appearance.inactive_opacity", "Inactive window opacity", 0.5, 1.0, 0.01, 2)):
+                    ("appearance.active_opacity", "Active window opacity", 0.6, 1.0, 0.01, 2),
+                    ("appearance.inactive_opacity", "Inactive window opacity", 0.5, 1.0, 0.01, 2),
+                    ("appearance.blur_size", "Blur size", 1, 16, 1, 0),
+                    ("appearance.blur_passes", "Blur strength (passes)", 1, 6, 1, 0)):
                 self.row(w, title, None, slider(lo, hi, step, store().get(key), lambda v, k=key: self._set(k, v)))
             e = self.section("Effects")
             for key, title, sub in (("appearance.blur", "Blur", "Frosted glass behind bars, menus and see-through windows."),
                                     ("appearance.glow", "Soft glow", "A faint accent halo around the focused window."),
                                     ("appearance.animations", "Animations", None)):
                 self.row(e, title, sub, switch(store().get(key), lambda on, k=key: self._set(k, on)))
-            self.row(e, "Reset appearance", "Back to the Nothing defaults.", button("Reset", self._reset, "danger"))
+            self.row(e, "Reset appearance", "Windows, blur and wallpaper back to the defaults.", button("Reset", self._reset, "danger"))
             a = self.section("Advanced")
             if self.need(a, "nwg-look", "nwg-look", "Theme settings"):
                 self.row(a, "GTK theme, icons & cursor", "nwg-look", button("Open", lambda: spawn(["nwg-look"])))
@@ -1514,6 +1675,24 @@ def gui(page):
             Gtk.Settings.get_default().set_property("gtk-application-prefer-dark-theme", mode == "dark")
             for css in APP_CSS:
                 css.load_from_path(os.path.join(HERE, "style.css"))
+
+        def _mark_accent(self, accent):
+            for k, b in self.accent_btns.items():
+                ctx = b.get_style_context()
+                (ctx.add_class if k == accent else ctx.remove_class)("current")
+
+        def _accent(self, accent):
+            self._mark_accent(accent)
+
+            def reload_css(_r):
+                for css in APP_CSS:
+                    css.load_from_path(os.path.join(HERE, "style.css"))
+            bg(lambda: theme_accent(accent), reload_css)
+
+        def _delete(self, path):
+            if not app.win.confirm(f"Delete “{os.path.basename(path)}”?"):
+                return
+            bg(lambda: wallpaper_delete(path), lambda _r: (app.win.toast("Wallpaper deleted"), self.rebuild()))
 
         def _wall(self, path):
             bg(lambda: set_setting("appearance.wallpaper", path), lambda _r: (app.win.toast("Wallpaper changed"), self.rebuild()))
@@ -1853,7 +2032,7 @@ def gui(page):
             cls(lights, "traffic")
             for name, tip, act in (("close", "Close", self.close),
                                    ("min", "Minimise", lambda: spawn(["hyprctl", "dispatch",
-                                    'hl.dsp.window.move({ workspace = "special:magic" })'])),
+                                    'hl.dsp.window.move({ workspace = "special:magic", follow = false })'])),
                                    ("zoom", "Full Screen", lambda: spawn(["hyprctl", "dispatch", "hl.dsp.window.fullscreen()"]))):
                 b = Gtk.Button()
                 cls(b, "light", name)
@@ -2026,7 +2205,8 @@ def selftest(app, Win, Gtk, page_classes):
     actions = ["set_setting", "reset_setting", "wifi_power", "wifi_connect", "wifi_disconnect", "wifi_forget",
                "bt_power", "bt_action", "bt_scan", "pkexec", "install_packages", "spawn", "login_set",
                "dnd_set", "sound_default", "sound_volume", "sound_mute", "display_apply", "restart_idle",
-               "theme_set", "widgets_cmd"]
+               "theme_set", "widgets_cmd", "theme_accent", "theme_border", "ui_font_set", "text_scale_set",
+               "terminal_font_set", "wallpaper_delete"]
     actions.append("brightness_set")
     for name in actions:
         g[name] = (lambda n: lambda *a, **k: calls.append((n, a)) or ((0, "", "") if n in ("pkexec", "install_packages") else None))(name)
