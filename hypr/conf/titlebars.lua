@@ -18,11 +18,12 @@ return function(ctx)
     if not f then return end
     f:close()
 
-    local loaded = false
-    for _, p in ipairs(hl.get_loaded_plugins() or {}) do
-        if p.name and p.name:lower():find("hyprbars", 1, true) then loaded = true end
-    end
-    if not loaded then hl.plugin.load(PLUGIN) end            -- once; reloads keep it
+    -- Plugin loading is declarative in 0.56: every config run must request the plugin. Skipping
+    -- the call once it's loaded means "unload it", which reloads the config, which loads it
+    -- again … an endless reload loop that crashed Hyprland. So: always request it. On the first
+    -- run the plugin isn't loaded yet (no hl.plugin.hyprbars); Hyprland loads it and runs the
+    -- config again, and that run configures the bars (buttons are cleared before each reload).
+    hl.plugin.load(PLUGIN)
     if not (hl.plugin.hyprbars and hl.plugin.hyprbars.add_button) then return end
 
     local t = ctx.theme
@@ -60,5 +61,4 @@ return function(ctx)
         action = zoom })
 
     hl.window_rule({ name = "hyprbars-own-controls", match = { class = OWN_CONTROLS }, ["hyprbars:no_bar"] = true })
-    hl.window_rule({ name = "hyprbars-fullscreen",   match = { fullscreen = true },     ["hyprbars:no_bar"] = true })
 end
