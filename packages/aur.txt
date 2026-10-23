@@ -1,6 +1,12 @@
 # AUR packages (installed with yay). Nothing here is required.
 # Apple's SF fonts: install them from the official .dmg instead (scripts/install-sf-fonts.sh);
 # without them Inter / JetBrains Mono are used.
+# macOS look — recommended:
+#   whitesur-icon-theme            macOS icons (used automatically when installed)
+#   hyprland-plugin-hyprbars       title bars with traffic lights for kitty, Dolphin, …
+#                                  (pinned to the Hyprland version: update both together)
+# whitesur-icon-theme
+# hyprland-plugin-hyprbars
 # Uncomment to add extras:
 # wlogout
 # hyprshot

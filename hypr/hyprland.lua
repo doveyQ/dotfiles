@@ -13,6 +13,7 @@
 --   input.lua      keyboard, mouse, touchpad, gestures
 --   look.lua       borders, rounding, shadows, blur, animations
 --   rules.lua      window and layer rules
+--   titlebars.lua  macOS title bars + traffic lights (hyprbars plugin, when installed)
 --   keybinds.lua   programs and every key binding
 -- Colours and fonts come from the active theme: ~/.config/hypr/theme → themes/mac-dark or
 -- themes/mac-light (git-ignored link, switched by `nothing-theme toggle` / Super+Shift+T).
@@ -48,7 +49,7 @@ local ctx = {
 }
 if ctx.ui.main then ctx.machine.main = ctx.ui.main end
 
-for _, name in ipairs({ "monitors", "autostart", "input", "look", "rules", "keybinds" }) do
+for _, name in ipairs({ "monitors", "autostart", "input", "look", "rules", "titlebars", "keybinds" }) do
     dofile(hypr .. "/conf/" .. name .. ".lua")(ctx)
 end
 

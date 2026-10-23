@@ -6,7 +6,7 @@ return function(ctx)
     ---- MY PROGRAMS ----
     ---------------------
     local terminal    = "kitty"
-    local fileManager = "dolphin"
+    local fileManager = bin .. "/nothing-files"   -- Nautilus (Finder-style) if installed, else Dolphin
     local browser     = "firefox"
     local launcher    = "rofi -show drun -theme ~/.config/rofi/nothing.rasi"
 

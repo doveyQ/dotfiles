@@ -21,6 +21,7 @@ gtk-layer-shell
 # ── apps & settings tools ─────────────────────────
 kitty
 dolphin
+# nautilus                 # optional: Finder-style Files (translucent sidebar, traffic lights)
 nano
 pavucontrol
 blueman
