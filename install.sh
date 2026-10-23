@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ┏┓╻┏━┓╺┳╸╻ ╻╻┏┓╻┏━╸  dotfiles installer — Nothing OS dot-matrix Hyprland desktop
+# ┏┓╻┏━┓╺┳╸╻ ╻╻┏┓╻┏━╸  dotfiles installer — Copenhagen Hyprland desktop
 # ┃┗┫┃ ┃ ┃ ┣━┫┃┃┗┫┃╺┓  Idempotent: safe to run again after `git pull`.
 # ╹ ╹┗━┛ ╹ ╹ ╹╹╹ ╹┗━┛
 #
@@ -18,12 +18,10 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 BIN="$HOME/.local/bin"
 APPS="$HOME/.local/share/applications"
-FONTS="$HOME/.local/share/fonts/nothing"
 BACKUP="$HOME/.config-backup/$(date +%Y%m%d-%H%M%S)"
-FONT_REPO="https://github.com/xeji01/nothingfont"
 
 # config dirs in the repo → ~/.config/<name>
-CONFIG_DIRS=(hypr waybar swaync rofi kitty nwg-dock-hyprland nothing-shell)
+CONFIG_DIRS=(hypr waybar swaync rofi kitty nwg-dock-hyprland nothing-shell fontconfig)
 # executables → ~/.local/bin/<name>
 declare -A BINS=(
   [nothing-shell]="nothing-shell/nothing-shell.py"
@@ -54,7 +52,7 @@ for arg in "$@"; do
 done
 
 # ── output helpers ─────────────────────────────────────────
-R=$'\e[38;2;215;25;33m' W=$'\e[1;97m' D=$'\e[2m' N=$'\e[0m'
+R=$'\e[38;2;157;173;148m' W=$'\e[1;97m' D=$'\e[2m' N=$'\e[0m'
 step() { printf '\n%s●%s %s%s%s\n' "$R" "$N" "$W" "$*" "$N"; }
 info() { printf '  %s·%s %s\n' "$D" "$N" "$*"; }
 warn() { printf '  %s!%s %s\n' "$R" "$N" "$*"; }
@@ -181,17 +179,15 @@ fi
 # ── 3. fonts ─────────────────────────────────────────
 if ((DO_FONTS)); then
   step "Fonts"
-  if fc-list : family | grep -x "Ndot 57" >/dev/null; then   # (no -q: SIGPIPE + pipefail)
-    info "Nothing dot-matrix fonts already installed"
+  # Apple's SF Pro / SF Mono can't be redistributed; without them the theme's fontconfig
+  # file (hypr/themes/<name>/fonts.conf) maps them to Inter and JetBrains Mono.
+  if fc-list : family | grep -x "SF Pro Text" >/dev/null; then   # (no -q: SIGPIPE + pipefail)
+    info "SF Pro found"
   else
-    tmp=$(mktemp -d)
-    run git clone --quiet --depth 1 "$FONT_REPO" "$tmp/nothingfont"
-    run mkdir -p "$FONTS"
-    ((DRY)) || find "$tmp/nothingfont" -type f \( -iname '*.otf' -o -iname '*.ttf' \) -exec cp {} "$FONTS/" \;
-    rm -rf "$tmp"
-    run fc-cache -f "$FONTS"
-    info "installed Ndot 55/57, NType 82, Space Mono → $FONTS"
+    info "SF Pro not installed — falling back to Inter / JetBrains Mono"
+    info "(optional: the AUR package 'apple-fonts'; Apple's font licence applies)"
   fi
+  run fc-cache -f
 fi
 
 # ── 4. link configs ─────────────────────────────────────────

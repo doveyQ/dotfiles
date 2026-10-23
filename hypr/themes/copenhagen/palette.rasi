@@ -1,0 +1,20 @@
+/* Copenhagen palette for rofi — imported by nothing.rasi / powermenu.rasi / settings.rasi */
+* {
+  base:      #1e1c1a;
+  glass:     #1e1c1af0;
+  scrim:     #14121099;
+  card:      #34302ccc;
+  card2:     #46413bcc;
+  line:      #e9e4da1a;
+  fg:        #e9e4da;
+  dim:       #a39c91;
+  mute:      #6e6961;
+  on-accent: #1e1c1a;
+  accent:    #9dad94;
+  alert:     #c4917a;
+  sand:      #d8c6a5;
+
+  font-ui:      "SF Pro Text,Inter,Cantarell 12";
+  font-ui-sm:   "SF Pro Text,Inter,Cantarell 10";
+  font-display: "SF Pro Display,Inter Display,Inter 20";
+}

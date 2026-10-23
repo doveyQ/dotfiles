@@ -1,5 +1,6 @@
-# AUR packages (installed with yay). Nothing here is required — the Nothing
-# dot-matrix fonts are fetched straight from GitHub by install.sh.
+# AUR packages (installed with yay). Nothing here is required.
+# Apple fonts for the Copenhagen theme (else Inter / JetBrains Mono are used):
+# apple-fonts
 # Uncomment to add extras:
 # wlogout
 # hyprshot
