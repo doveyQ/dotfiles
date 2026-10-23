@@ -18,17 +18,18 @@ New here? Read **1 → 3**. Changing things? **5 → 7**. Something broken? **9*
 
 ## 1. What this is
 
-A complete Hyprland desktop modelled on **Nothing OS**: deep black surfaces, white type,
-dot-matrix numerals (the Ndot fonts) and a single red accent that always means
-*live, active or dangerous*.
+A complete Hyprland desktop in a **Copenhagen-interior** style: warm stone and oat tones,
+smoky frosted glass, Apple's SF Pro type (Inter as the free fallback) and muted earth
+accents — sage for *on / active*, sand for *warning*, clay for *live / critical*. No red,
+no pure white. Hairline window edges and soft, deep shadows give macOS-like depth.
 
 ```
 ┌───────────────────────────────── main screen ────────────────────────────────────┐
-│ [tux]             ⣿ ▬ · · · ·  ☀ 15°  11:32             [rec 📋 CPU RAM 🔔 ⏻]   │  ← top bar
-│  ╰ waybar            ╰ nothing-shell: dynamic island          ╰ waybar status pill│
+│╭[tux]─────────────── ▬ · · · ·  ☀ 15°  11:32 ──────── ‹ ↓↑ 󰤨 📋 🔔 ⚙ ⏻ ─╮│  ← one bar
+│  ╰ waybar               ╰ nothing-shell island (bar centre)   ╰ waybar right side │
 │                                                                                  │
 │ ┌ weather ┐                                                   MON, 07 OCT        │
-│ │ cards   │   (desktop widgets: waybar on the background layer)  12:27  ← Ndot    │
+│ │ cards   │   (desktop widgets: waybar on the background layer)  12:27  ← SF Pro  │
 │ └─────────┘                                                   CPU ●●○○  RAM ●●○  │
 │                                                                                  │
 │                      ┌──────── nwg-dock (auto-hide) ────────┐                    │
@@ -37,9 +38,10 @@ dot-matrix numerals (the Ndot fonts) and a single red accent that always means
 
 | Component | Role | Config |
 |---|---|---|
-| **Hyprland** | compositor, windows, workspaces, keybinds | `hypr/hyprland.lua` |
+| **Hyprland** | compositor, windows, workspaces, keybinds | `hypr/hyprland.lua` → `hypr/conf/*.lua` |
+| **Theme** | every colour and font, one folder per theme | `hypr/themes/<name>/` (active: `hypr/theme`) |
 | **nothing-shell** | dynamic island + control center (Python/GTK3, layer-shell) | `nothing-shell/` |
-| **Waybar** (×2) | logo + status pill · desktop widgets | `waybar/` |
+| **Waybar** (×2) | the top bar · desktop widgets | `waybar/` |
 | **SwayNC** | notification *popups* and Do-Not-Disturb | `swaync/` |
 | **Settings** | settings app + `nothing-settings` CLI (Python/GTK3) | `settings/` → `~/.config/nothing/` |
 | **Rofi** | app launcher, power menu, clipboard, cheat-sheet | `rofi/` |
@@ -153,7 +155,7 @@ focused screen.
 (brightnessctl, iio-sensor-proxy, power-profiles-daemon) plus a logind drop-in so the power key
 opens the power menu instead of switching off. The shared config already handles brightness
 keys (with a popup), tap-to-click, 3-finger workspace swipes, backlight dimming 30 s before the
-lock, low-battery warnings (20 / 10 %) and the battery in the status pill (click → Power Mode).
+lock, low-battery warnings (20 / 10 %) and the battery in the bar (click → Power Mode).
 `examples/laptop.lua` adds the machine-specific part: natural scrolling, touchpad acceleration,
 touchscreen + pen mapped to the panel and, on convertibles, auto-rotation **only in tablet
 mode** (`scripts/autorotate.sh`, triggered by the tablet-mode switch).
@@ -165,11 +167,19 @@ NVIDIA: remove the `LIBVA_DRIVER_NAME` line and follow the Hyprland wiki's NVIDI
 
 ## 3. Daily use
 
+### The top bar
+
+One continuous frosted bar. **Left:** the launcher (right-click → Settings). **Centre:** the
+island (below). **Right:** a chevron that slides out the tray, CPU and memory on hover ·
+download / upload speed · Wi-Fi (click → Settings → Network, right-click → connection
+editor) · clipboard history · battery (laptops) · notifications · quick settings (opens the
+control center) · power (right-click → lock).
+
 ### The dynamic island (top centre)
 
-*Idle:* workspace dots (the white pill is the active one), weather, dot-matrix clock.
-A tiny animated **dot equaliser** appears while media plays; a **blinking red dot** while
-recording the screen; a red speaker if audio is muted.
+*Idle:* it is the bar's centre — workspace dots (the sage pill is the active one), weather,
+clock. A tiny animated **dot equaliser** appears while media plays; a **breathing clay dot**
+while recording the screen; a sage speaker if audio is muted.
 
 | Do | Result |
 |---|---|
@@ -187,12 +197,12 @@ settings) · Wi-Fi and Bluetooth toggles.
 
 It hides itself while a window is fullscreen on the main screen.
 
-### Control center — `Super` `N` (or click CPU / RAM / 🔔 in the status pill)
+### Control center (quick settings) — `Super` `N` (or click the sliders, CPU / RAM or 🔔 in the bar)
 
-Live CPU history as a dot matrix (newest column red), RAM, CPU/GPU/SSD temperatures (tile
-turns red when hot), toggles for **Wi-Fi · Bluetooth · Silent (DND) · Mic**, notification
-history (✕ to dismiss, **CLEAR** for all) and power buttons. **Exit / Reboot / Off ask
-twice** — the button turns red and says *AGAIN?* for 2.6 s.
+Live CPU history as a dot matrix (newest column in the accent colour), RAM, CPU/GPU/SSD
+temperatures (tile warms to clay when hot), toggles for **Wi-Fi · Bluetooth · Silent (DND) ·
+Mic**, notification history (✕ to dismiss, **Clear** for all) and power buttons. **Log Out /
+Restart / Shut Down ask twice** — the button turns clay and says *Confirm?* for 2.6 s.
 Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
 ### Power menu — `Super` `Shift` `X` (or click ⏻)
@@ -218,7 +228,7 @@ A real settings app in the Nothing style. Every page changes things **live**:
 | **Bluetooth** | turn on the service if needed, power, scan, pair, connect, disconnect, remove; Blueman for extras |
 | **Sound** | output & input device, volume (up to 150 %), mute, test sound, mixer |
 | **Displays** | main screen, resolution & refresh rate, scale, position (left/right/above/below), VRR, on/off — with a 15-second *Keep / Revert* safety prompt |
-| **Appearance** | wallpaper gallery + your own images, window gaps, corner radius, border, inactive opacity, blur, red glow, animations; GTK theme/icons/cursor (nwg-look) |
+| **Appearance** | wallpaper gallery + your own images, window gaps, corner radius, border, inactive opacity, blur, soft glow, animations; GTK theme/icons/cursor (nwg-look) |
 | **Night mode** | on/off, warmth, schedule with presets or exact times |
 | **Notifications** | Do Not Disturb, clear history, test notification |
 | **Keyboard & mouse** | layout + variant (all XKB layouts), key repeat, pointer speed, acceleration, natural scrolling; touchpad tap / scrolling / disable-while-typing on laptops |
@@ -292,7 +302,7 @@ The lock screen shows the current keyboard layout — type your password with th
 
 ### Notifications
 
-Popups appear top-right (SwayNC). History lives in the control center. The bell gets a red
+Popups appear top-right (SwayNC). History lives in the control center. The bell gets a sage
 dot when there is history; `Super` `Shift` `N` (or right-click the bell) toggles DND.
 
 ### Screenshots, recording, clipboard
@@ -392,7 +402,7 @@ dot, `-RTMIN+9` the notification bell.
 | `/etc/systemd/logind.conf.d/10-nothing-laptop.conf` | laptops: power key → power menu |
 | `$XDG_RUNTIME_DIR/nothing-rotate/` | auto-rotation state (convertibles) |
 | `hypr/hyprland.local.lua`, `waybar/local.jsonc` | your machine files — inside the repo folder, git-ignored |
-| `~/.local/share/fonts/nothing/` | Ndot / NType fonts |
+| `~/.config/fontconfig/` | symlink to `fontconfig/` — SF Pro → Inter, SF Mono → JetBrains Mono fallbacks |
 | `~/.config-backup/<timestamp>/` | your configs from before the first install |
 
 ---
@@ -401,29 +411,35 @@ dot, `-RTMIN+9` the notification bell.
 
 | I want to change… | Edit |
 |---|---|
-| colours | `nothing-shell/style.css`, `waybar/style.css`, `waybar/desktop.css`, `rofi/*.rasi`, `swaync/style.css`, `kitty/kitty.conf`, `hypr/hyprlock.conf` (all share one palette) |
-| gaps, borders, rounding, blur, animations | **Settings → Appearance** (defaults: `hypr/hyprland.lua` → LOOK AND FEEL) |
-| keybindings | `hypr/hyprland.lua` → KEYBINDINGS (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
-| autostart | `hypr/hyprland.lua` → `hl.on("hyprland.start", …)` |
+| colours, fonts | the active theme, `hypr/theme/` → `palette.css` (all GTK: bar, island, quick settings, Settings app, dock, notifications), `palette.rasi`, `theme.lua`, `hyprlock.conf`, `kitty.conf`, `fonts.conf` |
+| the whole theme | `cp -r hypr/themes/copenhagen hypr/themes/mine`, edit, `ln -sfn themes/mine hypr/theme`, `make reload` |
+| gaps, borders, rounding, shadows, blur, animations | **Settings → Appearance** (defaults: `hypr/conf/look.lua`; borderless windows: `borderless = true` in `theme.lua`) |
+| keybindings, default apps | `hypr/conf/keybinds.lua` (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
+| autostart, environment | `hypr/conf/autostart.lua` |
+| window / layer rules | `hypr/conf/rules.lua` |
 | idle / lock / suspend times | **Settings → Power & lock** (default: `hypr/hypridle.conf`) |
 | lock-screen look | `hypr/hyprlock.conf` |
 | wallpaper | **Settings → Appearance** (shared images: `hypr/wallpapers/`, yours: `~/.local/share/nothing/wallpapers/`) |
 | keyboard, mouse, touchpad, monitors | **Settings** (or `hyprland.local.lua` for things the app doesn't cover) |
-| weather location | `export NOTHING_WEATHER_LOCATION=Vienna` (e.g. via `hl.env(...)` in hyprland.lua) |
+| weather location | `export NOTHING_WEATHER_LOCATION=Vienna` (e.g. via `hl.env(...)` in `hyprland.local.lua`) |
 | monitors, main screen for the island, touchpad, per-machine binds | `~/.config/hypr/hyprland.local.lua` (§2 *Your machine*) |
 | a new setting | `settings/nothing-settings.py`: add the key to `SCHEMA` (CLI + generated config) and a row to its page |
 | island content | `nothing-shell/nothing-shell.py` → `Island._build_panel()` |
 
-**Apply changes:** Hyprland reloads `hyprland.lua` automatically on save; everything else:
-`make reload` or `Super` `Shift` `R`. Always run `make check` before committing.
+**Apply changes:** Hyprland reloads `hyprland.lua` automatically on save; after editing
+`conf/*.lua`, the theme or anything else: `make reload` or `Super` `Shift` `R`. Always run `make check` before committing.
 
 **Machine-specific tweaks** never go into the shared files — put them in
 `~/.config/hypr/hyprland.local.lua` (its `setup()` runs last and can override anything) and
 `~/.config/waybar/local.jsonc`. Both are git-ignored; see §2 *Your machine*.
 
-**Fonts.** Ndot is used for numerals and headings. In **Pango font strings** (hyprlock, rofi)
-write `Ndot 57,` with a trailing comma — otherwise Pango reads `57` as the size. In GTK/Waybar
-CSS (`font-family: "Ndot 57"`) no comma is needed.
+**Fonts.** SF Pro Text for UI, SF Pro Display for large numerals, SF Mono for code. They're
+Apple's and not bundled (AUR `apple-fonts` if you want them); `fontconfig/fonts.conf` includes
+the theme's `fonts.conf`, which maps them to Inter / Inter Display / JetBrains Mono for every
+app — check with `fc-match "SF Pro Text"`. **Pango font strings** (hyprlock, rofi) take a
+comma-separated family list; end it with a comma (`SF Pro Display, Inter,`) so a family name
+ending in a number isn't read as the size. GTK CSS can't hold font variables, so the font
+families for GTK live in the typography block of `palette.css`.
 
 ---
 
@@ -516,7 +532,7 @@ Packages are left installed; remove them with `sudo pacman -Rns …` if you want
 | Weather shows `--` | offline or wttr.in down; `~/.config/waybar/scripts/weather.py bar` to test |
 | No album art | the player doesn't publish `mpris:artUrl` (common for browser tabs) — a dot placeholder is shown |
 | Icons show as □ | Nerd fonts missing: `sudo pacman -S ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols` |
-| Dot-matrix text shows as a normal font | `fc-list \| grep Ndot` — rerun `./install.sh --no-packages --no-system` |
+| Text isn't Inter / SF Pro | `fc-match "SF Pro Text"` should say Inter (or SF Pro); if not, `make links` (links `~/.config/fontconfig`) and `fc-cache -f` |
 | A rofi menu shows raw CSS as text | a `.rasi` line with two quoted strings — keep one quoted value per line |
 | `hyprctl dispatch exit` → “')' expected near …” | 0.56 syntax: `hyprctl dispatch 'hl.dsp.exit()'` |
 

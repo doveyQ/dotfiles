@@ -6,6 +6,26 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed — Copenhagen redesign
+- **New look**: warm-neutral Nordic palette (chalk · stone · smoke · sage · clay · sand ·
+  slate), smoky frosted glass, no red, no pure white. Windows get 1px low-contrast outlines
+  (or none: `borderless = true`), 14px continuous-curve corners and deep soft shadows; the red
+  focus glow is gone (optional sage *Soft glow* in Settings).
+- **Typography**: SF Pro Text / Display and SF Mono replace the Ndot dot-matrix fonts;
+  `fontconfig/` maps them to Inter / Inter Display / JetBrains Mono when Apple's fonts aren't
+  installed. The installer no longer downloads the Nothing fonts.
+- **One continuous top bar** instead of separate pills: launcher · island (now the bar's
+  transparent centre) · hover drawer (tray, CPU, memory) · network speed · Wi-Fi · clipboard ·
+  battery · notifications · quick settings · power.
+- **Themes**: every colour and font lives in `hypr/themes/<name>/` (`theme.lua`,
+  `palette.css`, `palette.rasi`, `hyprlock.conf`, `kitty.conf`, `fonts.conf`); the symlink
+  `hypr/theme` selects the active one. nothing-shell reads its drawing colours from the palette.
+- **Modular Hyprland config**: `hyprland.lua` is now a loader for `hypr/conf/`
+  (`monitors`, `autostart`, `input`, `look`, `rules`, `keybinds`).
+- Restyled to match: island + control center, Settings app, SwayNC, rofi launcher / session
+  menu, dock, kitty, hyprlock, desktop widgets. Title-case labels instead of all-caps.
+- New default wallpaper `hypr/wallpapers/copenhagen.jpg`.
+
 ### Added
 - **Settings app** (`Super+I`, launcher entry *Settings*): Network, Bluetooth, Sound, Displays,
   Appearance, Night mode, Notifications, Keyboard & mouse, Power & lock, Login screen,

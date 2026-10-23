@@ -2,12 +2,12 @@
 
 # ● nothing — dotfiles
 
-**A Nothing OS–inspired Hyprland desktop: deep blacks, crisp whites, dot‑matrix type and one red accent.**
+**A Copenhagen‑interior Hyprland desktop: warm stone and oat, smoky glass, SF Pro type and muted earth accents.**
 
 [![CI](https://github.com/doveyQ/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/doveyQ/dotfiles/actions/workflows/ci.yml)
 ![Hyprland](https://img.shields.io/badge/Hyprland-0.56%2B%20·%20Lua-000000?logo=hyprland&logoColor=white)
 ![Arch](https://img.shields.io/badge/Arch%20%2F%20EndeavourOS-000000?logo=archlinux&logoColor=white)
-[![License: MIT](https://img.shields.io/badge/license-MIT-d71921)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-9dad94)](LICENSE)
 
 EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
@@ -35,14 +35,17 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
 ## Features
 
-- **Dynamic island** (`nothing-shell`) — compact pill with workspace dots, weather and a
-  dot‑matrix clock. Hover (or click) and it morphs into a panel: big clock, weather with a
+- **One floating glass bar** — launcher on the left, the island in the centre, and on the right
+  a hover drawer (tray · CPU · memory), network speed, Wi‑Fi, clipboard, notifications,
+  quick settings and the session menu.
+- **Dynamic island** (`nothing-shell`) — the bar's centre: workspace dots, weather and the
+  clock. Hover (or click) and it morphs into a panel: big clock, weather with a
   3‑day forecast, calendar, MPRIS media player (Spotify, Firefox, Chromium/YouTube, Netflix …)
   with album art, dot progress bar and controls, volume slider, network / Wi‑Fi / Bluetooth.
-  A tiny animated dot equaliser shows while music plays; a blinking red dot while recording.
+  A tiny animated dot equaliser shows while music plays; a breathing clay dot while recording.
   Hidden automatically when a window is fullscreen.
-- **Control center** — live dot‑matrix CPU history graph, RAM bar, CPU/GPU/SSD thermals
-  (tiles turn red when hot), Wi‑Fi / Bluetooth / Silent / Mic toggles, notification history
+- **Quick settings / control center** — live dot CPU history graph, RAM bar, CPU/GPU/SSD thermals
+  (tiles warm to clay when hot), Wi‑Fi / Bluetooth / Silent / Mic toggles, notification history
   with per‑item dismiss and clear‑all, and power actions with two‑step confirm for
   destructive ones.
 - **Power overlay** — full‑screen dim with five tiles and single‑key accelerators.
@@ -53,13 +56,15 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
   schedule (presets or exact times). Settings, control-center tile or `Super` `Ctrl` `N`.
 - **Nothing login** — boots straight into the Nothing lock screen instead of the standard
   login screen (greetd; on by default, switch in Settings → Login screen).
-- **One lock screen** — hyprlock only: giant Ndot clock, blur, battery/AC readout,
-  now‑playing, keyboard‑layout chip, red‑accented password pill.
+- **One lock screen** — hyprlock only: large thin SF Pro clock, blur, battery/AC readout,
+  now‑playing, keyboard‑layout chip, frosted password pill.
+- **Swappable theme** — every colour and font lives in `hypr/themes/<name>/`; the active theme is
+  the symlink `hypr/theme`. SF Pro / SF Mono fall back to Inter / JetBrains Mono via fontconfig.
 - **Austrian German, no dead keys** everywhere: Hyprland, hyprlock, login screen, TTY.
 - **Works on any machine out of the box** — every screen at its preferred mode. Monitors, main
   screen and devices go in one git-ignored file, `~/.config/hypr/hyprland.local.lua`; start from
   `hypr/examples/` (dual-monitor desktop, laptop / 2-in-1).
-- **Laptops** — battery in the status pill, low-battery warnings, brightness keys, touchpad tap +
+- **Laptops** — battery in the bar, low-battery warnings, brightness keys, touchpad tap +
   3-finger workspace swipes, power key → power menu, Power Mode switch in Settings; on
   convertibles touchscreen + pen and auto-rotation in tablet mode.
 
@@ -100,8 +105,8 @@ What it does:
 2. **System** — `localectl` keymap `at` / `nodeadkeys` (X11 + login screen) and
    `de-latin1-nodeadkeys` (TTY); enables `bluetooth` and `NetworkManager`; warns about other
    lockers (swaylock, swayidle, xss-lock) so hyprlock is the only one.
-3. **Fonts** — Nothing's Ndot 55/57, NType 82 from
-   [xeji01/nothingfont](https://github.com/xeji01/nothingfont) into `~/.local/share/fonts/nothing`.
+3. **Fonts** — checks for Apple's SF Pro (optional, AUR `apple-fonts`); without it the theme's
+   fontconfig file maps SF Pro → Inter and SF Mono → JetBrains Mono.
 4. **Configs** — existing `~/.config/<dir>` folders are moved to `~/.config-backup/<timestamp>/`,
    then symlinked to this repo. Helper commands go to `~/.local/bin`, launcher entries to
    `~/.local/share/applications`.
@@ -123,7 +128,10 @@ dotfiles/
 ├── system/              login-screen helper + greetd template, laptop logind drop-in
 ├── system/logind/       laptops: power key → power menu
 ├── hypr/                → ~/.config/hypr
-│   ├── hyprland.lua     main config (Hyprland ≥ 0.56 uses Lua, not hyprland.conf)
+│   ├── hyprland.lua     loader (Hyprland ≥ 0.56 uses Lua, not hyprland.conf)
+│   ├── conf/            monitors · autostart · input · look · rules · keybinds (.lua)
+│   ├── themes/          copenhagen/: theme.lua · palette.css · palette.rasi · hyprlock.conf · kitty.conf · fonts.conf
+│   ├── theme            → themes/copenhagen  (the active theme — switch by repointing it)
 │   ├── hyprlock.conf    lock screen
 │   ├── hypridle.conf    idle → (dim) → lock → screens off → suspend
 │   ├── examples/        machine files to copy to hyprland.local.lua (desktop, laptop)
@@ -131,11 +139,12 @@ dotfiles/
 │   ├── wallpapers/
 │   └── scripts/         record · battery · nowplaying · nothing-reload · brightness · autorotate
 ├── nothing-shell/       → ~/.config/nothing-shell   (island + control center, Python/GTK3)
-├── waybar/              → ~/.config/waybar   (logo + status pill, desktop widgets, scripts/)
+├── waybar/              → ~/.config/waybar   (the top bar, desktop widgets, scripts/)
 ├── swaync/              → ~/.config/swaync   (notification popups)
 ├── rofi/                → ~/.config/rofi     (launcher, power menu, cheat-sheet, scripts/)
 ├── kitty/               → ~/.config/kitty
 ├── nwg-dock-hyprland/   → ~/.config/nwg-dock-hyprland
+├── fontconfig/          → ~/.config/fontconfig  (includes the active theme's font fallbacks)
 ├── applications/        → ~/.local/share/applications  (Settings, Power Menu)
 ├── assets/previews/     README screenshots
 └── .github/             CI workflow · issue & PR templates
@@ -175,8 +184,15 @@ dotfiles/
   It's git-ignored, so every computer keeps its own and `git pull` never conflicts.
   Bar on one screen only: `waybar/local.example.jsonc` → `~/.config/waybar/local.jsonc`.
 - **Weather location**: `NOTHING_WEATHER_LOCATION=Vienna` — default is IP‑based.
-- **Colours**: `nothing-shell/style.css`, `waybar/style.css`, `rofi/nothing.rasi`, `kitty/kitty.conf`
-  all share the palette `#000 · #141414 · #1e1e1e@80% · #fff · #d71921`.
+- **Colours & fonts**: one folder per theme in `hypr/themes/`. `palette.css` feeds every GTK
+  surface (bar, island, quick settings, Settings app, dock, notifications), `palette.rasi` rofi,
+  `theme.lua` Hyprland, `hyprlock.conf` the lock screen, `kitty.conf` the terminal,
+  `fonts.conf` the font fallbacks. Copenhagen: chalk `#e9e4da` · stone `#a39c91` ·
+  smoke `#1e1c1a` · sage `#9dad94` · clay `#c4917a` · sand `#d8c6a5` · slate `#8b9db0`.
+- **New theme**: `cp -r hypr/themes/copenhagen hypr/themes/mine`, edit, then
+  `ln -sfn themes/mine hypr/theme && nothing-reload`.
+- **Window look** (border, rounding, shadows, blur): `hypr/conf/look.lua`; `borderless = true` in
+  the theme drops the outlines and keeps only the shadows.
 - After editing nothing‑shell CSS: `nothing-shell reload-css`.
 
 ## Notes & troubleshooting
@@ -200,9 +216,9 @@ see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE). The Nothing fonts are not included and keep their own license.
+[MIT](LICENSE). Apple's SF fonts are not included and keep their own license.
 
 ## Credits
 
-Nothing fonts by Nothing Technology (via [xeji01/nothingfont](https://github.com/xeji01/nothingfont)) ·
+Inter by Rasmus Andersson · JetBrains Mono ·
 Hyprland and the hypr* ecosystem · Waybar · SwayNC · Rofi · kitty · weather from [wttr.in](https://wttr.in).
