@@ -181,21 +181,60 @@ Blueman) · Wi-Fi (click → Settings → Network, right-click → connection ed
 for Control Center and notifications, right-click for Do Not Disturb. By design the bar never
 shows the focused app, window title, page or video.
 
-### Light & Dark mode — `Super` `Shift` `T`
+### Appearance: Light & Dark, accent, border, fonts — `Super` `Shift` `T`
 
-Also: the **Dark Mode** tile in Control Center, **Settings → Appearance**, or
-`nothing-theme toggle | light | dark | status`. It repoints `~/.config/hypr/theme` to
-`themes/mac-light` or `themes/mac-dark` and reloads everything in place: Hyprland borders,
-shadows and blur, the menu bar, Control Center, island and widgets, notifications, the dock,
-kitty, GTK apps (`color-scheme` + Breeze/Adwaita variant), KDE/Qt apps such as Dolphin, the
-wallpaper (unless you picked one in Settings) and — at the next lock — hyprlock.
+Light / Dark: the **Dark Mode** tile in Control Center, **Settings → Appearance**, or the
+terminal:
 
-**Dolphin (Files) like Finder.** Qt apps use KDE's platform theme (`QT_QPA_PLATFORMTHEME=kde`),
-so they follow `~/.config/kdeglobals`. On every switch `nothing-theme` applies the macOS Dark /
-Light colour scheme from `kde/color-schemes/` (linked to `~/.local/share/color-schemes/`) with
-Apple's blue as accent, Papirus-Dark / -Light icons (blue folders), SF Pro / SF Mono, Breeze,
-double-click to open, and in Dolphin: no menu bar, small sidebar icons, no zoom slider. Open KDE
-apps update in place. Dolphin has no title bar under Hyprland, so there are no traffic lights.
+```
+nothing-theme toggle | light | dark | apply | status [--all]
+nothing-theme accent blue | purple | pink | red | orange | yellow | green | graphite
+nothing-theme border hairline | accent | graphite | none
+```
+
+The choices are saved in `~/.config/nothing/theme.conf`. From them `nothing-theme` generates
+`~/.config/hypr/theme/` (git-ignored): every file there imports the light or dark base theme
+(`hypr/themes/mac-dark|mac-light/`) and overrides the accent. Then it reloads everything in
+place: Hyprland borders, shadows, blur and title bars, the menu bar, Control Center, island and
+widgets, notifications, the dock, kitty, GTK and libadwaita apps (`color-scheme`,
+`accent-color`, icon theme, fonts, button layout), KDE/Qt apps such as Dolphin, the wallpaper
+(unless you picked one in Settings) and — at the next lock — hyprlock.
+
+**Fonts** (Settings → Appearance → Fonts): the interface font is swapped in one place — a
+fontconfig rule (`~/.config/nothing/fonts.conf`) maps SF Pro Text / Display to SF Pro Rounded,
+Inter, Cantarell or any installed family, so the bar, widgets, notifications and apps all follow.
+**Text size** sets GTK's `text-scaling-factor` and scales the KDE / Qt point sizes;
+**Terminal font size** writes `~/.config/nothing/kitty.conf` (included last by kitty).
+
+**Icons:** WhiteSur (macOS) when installed — `yay -S whitesur-icon-theme` — otherwise
+Papirus. `nothing-theme` picks the light or dark variant.
+
+### Window controls — traffic lights
+
+- **GTK / libadwaita apps with a header bar** (Nautilus, GNOME apps, the GTK 4 dialogs): red,
+  yellow, green circles on the left, glyphs on hover, grey when unfocused —
+  `hypr/themes/gtk3.css` / `gtk4.css`, imported from `~/.config/gtk-{3,4}.0/gtk.css` next to
+  KDE's colour import. Button order `close,minimize,maximize:` is set in gsettings, both
+  `settings.ini` files and KWin's config.
+- **Everything else** (kitty, Dolphin, …) has no title bar under Hyprland. Install Hyprland's
+  official **hyprbars** plugin — `yay -S hyprland-plugin-hyprbars` — and `hypr/conf/titlebars.lua`
+  gives those windows a blurred macOS title bar: close · minimise (to the scratchpad, `Super`
+  `S`) · zoom (maximise; also double-click the bar), dragging by the bar. Apps that draw their
+  own controls (browsers, VS Code, GTK header-bar apps, Settings) are excluded. The plugin is
+  built for one Hyprland version — update both together.
+- The Settings app draws its own traffic lights.
+
+### Files (Finder)
+
+`Super` `E` runs `nothing-files`: **Nautilus** when it's installed (`sudo pacman -S nautilus`) —
+Finder's translucent, blurred sidebar, opaque file view and traffic lights from
+`hypr/themes/gtk4.css` — otherwise **Dolphin**. Pin one with
+`echo dolphin > ~/.config/nothing/files-app`.
+
+**Dolphin** follows `~/.config/kdeglobals` (`QT_QPA_PLATFORMTHEME=kde`). `nothing-theme`
+applies the macOS Dark / Light colour scheme from `kde/color-schemes/` with your accent, the
+icon theme, SF Pro, Breeze, double-click to open, and in Dolphin: no menu bar, small sidebar
+icons, no zoom slider. Open KDE apps update in place. Traffic lights need hyprbars (above).
 
 ### Desktop widgets
 
@@ -204,16 +243,29 @@ Drawn by nothing-shell on the wallpaper (under windows), each **small** or **med
 | Widget | Shows | Click |
 |---|---|---|
 | **Weather** | sky gradient for the condition and time of day, H/L; medium: 3-day forecast | island panel (forecast, calendar) |
-| **Clock** | analog (orange second hand) or digital; medium: both | analog ↔ digital |
-| **Calendar** | weekday in red, date; medium: month grid | island panel (calendar) |
+| **Clock** | analog (orange second hand) or digital; medium: **World Clock** — here + 3 cities | analog ↔ digital |
+| **Calendar** | weekday in red, date, next event; medium: month grid + agenda | island panel (calendar) |
 | **System** | CPU / memory / disk activity rings; medium: values + temperatures | Control Center |
+| **Storage** | “About This Mac”: available space and a usage bar per volume | Files |
+| **Batteries** | a ring per device — laptop (with health), mouse, headset … (UPower) | — |
+| **Now Playing** | cover, title, artist, progress, ⏮ ⏯ ⏭ | buttons; cover → island |
+| **Notes** | a scratchpad you type into (saved to `~/.config/nothing/notes-<id>.txt`, 0600) | drag by the header |
+| **Network** | live download / upload and a 60 s graph | — |
+| **Focus Timer** | Pomodoro: 25 / 5 or 50 / 10 minutes, notifies at each switch | start / pause; right-click: reset, skip |
+
+**Agenda:** export your calendars as `.ics` into `~/.local/share/nothing/calendars/` — single
+events are shown (recurring ones aren't expanded). **World Clock cities:** right-click the clock
+→ New York · London · Tokyo / Cupertino · New York · São Paulo / Dubai · Singapore · Sydney.
 
 - **Move**: drag a widget anywhere (snaps to a 4 px grid; the layout is saved).
-- **Right-click a widget**: Small / Medium, Analog / Digital, Remove, Add Widget, Edit Widgets,
-  Reset. **Right-click the desktop**: Add Widget, Edit Widgets, Reset, Change Wallpaper.
+- **Right-click a widget**: Small / Medium, its options (style, cities, timer length), its own
+  actions (reset timer, clear note), Remove, Add Widget, Edit Widgets, Reset. **Right-click the
+  desktop**: Add Widget (the gallery — every kind, with sizes), Edit Widgets, Reset, Change
+  Wallpaper.
 - **Edit Widgets**: remove badges on every widget plus **Add Widget** / **Done** buttons;
   click the empty desktop to finish. Several widgets of one kind are fine (up to 24).
-- **Settings → Appearance → Desktop widgets**: a switch per kind, *Edit Widgets*, *Reset*.
+- **Settings → Appearance → Desktop widgets**: a switch per kind (all ten), *Edit Widgets*,
+  *Reset*.
 - **Terminal**: `nothing-shell widgets list | types | add TYPE [small|medium] | remove ID|TYPE
   | edit | done | reset`.
 - The layout is `~/.config/nothing/widgets.json` (per machine, 0600). It's validated on load:
@@ -348,7 +400,20 @@ The lock screen shows the current keyboard layout — type your password with th
 
 ### Notifications
 
-Popups appear top-right (SwayNC). History lives in the control center. History is in the Control Center; `Super` `Shift` `N` (or right-click the bell) toggles DND.
+macOS-style banners top-right, just under the menu bar (SwayNC): a 16 px squircle in the
+theme's colours, app icon on the left, bold title, body, rounded action buttons and a round
+dismiss button on hover; they slide in from the right. History lives in the Control Center;
+`Super` `Shift` `N` (or right-click the date) toggles Do Not Disturb. Try them:
+
+```
+notify-send -a Messages -i mail-message-new "Anna" "Are we still on for dinner tonight?"
+notify-send -a Calendar -i x-office-calendar "Team Standup" "Starts in 10 minutes" -A open=Open -A snooze=Snooze
+notify-send -u critical -a Battery "Battery low" "10 % remaining"
+```
+
+The banners are near-opaque rather than see-through: Hyprland doesn't blur SwayNC's GTK 4
+surface (rules reach it — dimming works — but blur doesn't render), so frosted-but-legible
+glass isn't possible there; the menu bar, Control Center and widgets are blurred.
 
 ### Screenshots, recording, clipboard
 

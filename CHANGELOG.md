@@ -6,6 +6,20 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added — macOS fidelity
+- **Accent colours and border styles**: `nothing-theme accent …` / `border …`, Settings →
+  Appearance. `~/.config/hypr/theme/` is now generated (mode + accent) instead of a symlink.
+- **Traffic lights**: GTK 3 / 4 header bars (`hypr/themes/gtk3.css`, `gtk4.css`), macOS
+  button order everywhere; macOS title bars for all other windows via the hyprbars plugin
+  (`hypr/conf/titlebars.lua`, optional).
+- **Six new widgets** (ten in all): Storage, Batteries, Now Playing, Notes, Network, Focus
+  Timer; World Clock (medium Clock) and an `.ics` agenda (Calendar); grouped Add Widget gallery.
+- **Settings → Appearance**: accent picker, window border, interface font, text size, terminal
+  font size, active opacity, blur size and passes, delete your own wallpapers.
+- **Files**: `nothing-files` (Super+E) — Nautilus with a Finder sidebar when installed, else Dolphin.
+- **Notifications**: macOS banners (squircle, icon left, bold title, round buttons, slide-in).
+- WhiteSur icons used automatically when installed; GTK fonts and button layout set by `nothing-theme`.
+
 ### Security
 - Wi-Fi passwords are passed to nmcli on stdin, no longer on the command line.
 - nothing-shell's socket is 0600 and checks the peer UID; requests are size-capped.
@@ -65,6 +79,9 @@ project uses [Semantic Versioning](https://semver.org/).
   Shared helper `system/nothing-login.sh` (also used by Settings → Login screen).
 
 ### Fixed
+- Settings self-test failed on an empty Bluetooth scan result.
+- Album art that isn't an image no longer crashes the island; art is fetched over http(s)
+  only and capped at 5 MB.
 - Buttons and menu entries that did nothing: the Hyprland session's PATH lacks `~/.local/bin`
   (login managers don't read `~/.bashrc`) — night-mode tile, Night Mode menu, launcher
   *Settings* entry, island network chip. PATH is now set in `hyprland.lua`, every internal call

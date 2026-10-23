@@ -42,12 +42,21 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 - **Light & Dark mode** — `Super` `Shift` `T`, the Control Center tile, Settings → Appearance or
   `nothing-theme toggle`: menu bar, Control Center, widgets, notifications, launcher, dock,
   Settings, kitty, GTK apps, Dolphin and other KDE/Qt apps, lock screen and wallpaper switch live.
-- **Finder-style Dolphin** — macOS Dark / Light colour schemes (`kde/color-schemes`), Apple-blue
-  selection, SF Pro, blue folders (Papirus), double-click to open, no menu bar.
-- **Desktop widgets** — Weather, Clock, Calendar and System, each small or medium. Drag them
-  anywhere, click them (forecast, analog ↔ digital, calendar, Control Center), right-click for
-  size / style / remove / add, or *Edit Widgets* for macOS-style remove badges and **Add
-  Widget**. Also in Settings → Appearance and `nothing-shell widgets …`.
+- **Files like Finder** — `Super` `E` opens Nautilus with a translucent blurred sidebar when
+  installed, otherwise Dolphin with macOS Dark / Light colour schemes, your accent, SF Pro,
+  WhiteSur / Papirus icons, double-click to open, no menu bar.
+- **Ten desktop widgets** — Weather, Clock / World Clock, Calendar & agenda, System rings,
+  Storage, Batteries, Now Playing, Notes, Network, Focus Timer — small or medium. Drag them
+  anywhere, click them, right-click for size / options / remove / add, or *Edit Widgets* for
+  macOS-style remove badges and the **Add Widget** gallery. Also in Settings → Appearance and
+  `nothing-shell widgets …`.
+- **Traffic lights** — red / yellow / green on the left in GTK and libadwaita header bars;
+  kitty, Dolphin and every other window get macOS title bars with the optional hyprbars plugin.
+- **Appearance in Settings** — light / dark, eight Apple accent colours, window border, interface
+  font (SF Pro, SF Pro Rounded, Inter, …), text and terminal font size, wallpaper gallery with
+  add / delete, window opacity, corner radius, blur size and strength.
+- **Notification banners** — top-right squircles under the menu bar with icon, bold title and
+  round buttons, sliding in.
 - **Security & privacy** — see [the Guide §4](docs/GUIDE.md#security--privacy): owner-only
   sockets and data files, no secrets on command lines, validated configs, nothing private on the
   lock screen or in the bar, password-manager clips kept out of clipboard history.
