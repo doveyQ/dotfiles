@@ -299,7 +299,7 @@ dot when there is history; `Super` `Shift` `N` (or right-click the bell) toggles
 
 | Keys | Action |
 |---|---|
-| `Print` | select region → clipboard |
+| `Super` `Shift` `S` | select region → clipboard |
 | `Shift` `Print` | whole screen → `~/Pictures/` |
 | `Super` `Shift` `Print` | start/stop recording (select region; `Esc` = whole main screen) → `~/Videos/` |
 | `Super` `V` | clipboard history |

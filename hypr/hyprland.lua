@@ -306,14 +306,13 @@ for i = 1, 10 do
     hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
 end
 hl.bind(mod .. " + S",          hl.dsp.workspace.toggle_special("magic"))
-hl.bind(mod .. " + SHIFT + S",  hl.dsp.window.move({ workspace = "special:magic" }))
 hl.bind(mod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
 -- screenshots / recording (red dot appears in the island while recording)
-hl.bind("Print",                   exec("grim -g \"$(slurp)\" - | wl-copy && notify-send -a Screenshot 'Region copied'"))
+hl.bind(mod .. " + SHIFT + S",     exec("grim -g \"$(slurp)\" - | wl-copy && notify-send -a Screenshot 'Region copied'"))
 hl.bind("SHIFT + Print",           exec("grim ~/Pictures/$(date +%F_%H-%M-%S).png && notify-send -a Screenshot 'Saved to ~/Pictures'"))
 hl.bind(mod .. " + SHIFT + Print", exec(scripts .. "/record.sh toggle"))
 

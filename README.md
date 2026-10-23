@@ -162,7 +162,7 @@ dotfiles/
 | `Super` `Ctrl` `←↑→↓` | Resize window |
 | `Alt` `Tab` / `Super` `Tab` | Cycle windows / previous workspace |
 | `Super` `1`–`0` · `Super` `Shift` `1`–`0` | Workspace · move window there |
-| `Print` · `Shift` `Print` · `Super` `Shift` `Print` | Region → clipboard · full → ~/Pictures · record |
+| `Super` `Shift` `S` · `Shift` `Print` · `Super` `Shift` `Print` | Region → clipboard · full → ~/Pictures · record |
 | `Super` `Shift` `R` | Reload the desktop |
 | 3‑finger swipe | Previous / next workspace (touchpad and touchscreen) |
 | Brightness keys · Power key | Brightness (with popup) · power menu — laptop |
