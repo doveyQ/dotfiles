@@ -13,6 +13,7 @@ CLI — every setting in the app can also be read and written here
   nothing-settings reset KEY|SECTION          back to the default
   nothing-settings wifi  list|scan|connect SSID [PASSWORD]|disconnect|forget SSID|on|off
   nothing-settings bt    list|scan|connect MAC|disconnect MAC|pair MAC|remove MAC|on|off
+  nothing-settings shortcuts                  all keyboard shortcuts (change: set keys.ID "SUPER + T", off: "off")
   nothing-settings dnd                        toggle Do Not Disturb
   nothing-settings install PKG…               install packages (asks for your password)
 
@@ -270,6 +271,8 @@ class Store:
 
     def generate_lua(self):
         table = {"config": self.hypr_config(), "monitors": list(self.monitors().values())}
+        if self.data.get("keys"):
+            table["binds"] = dict(self.data["keys"])
         main = self.data.get("display", {}).get("main")
         if main:
             table["main"] = main
@@ -415,6 +418,8 @@ def set_setting(key, raw):
         return (wifi_power if key.startswith("wifi") else bt_power)(as_bool(raw))
     if key.startswith("display."):
         return display_set(key, raw)
+    if key.startswith("keys."):
+        return shortcut_set(key[5:], raw)
     if key not in SCHEMA:
         raise KeyError(f"unknown key: {key}  (see `nothing-settings list`)")
     if key == "idle.screen_off" and str(raw).strip() == "auto":
@@ -466,7 +471,7 @@ def reset_setting(key):
         except OSError:
             pass
         run(["hyprctl", "hyprpaper", "wallpaper", f",{SCHEMA['appearance.wallpaper'][2]}"])
-    if key.startswith("display"):
+    if key.startswith("display") or key.startswith("keys"):
         run(["hyprctl", "reload"])
 
 
@@ -943,6 +948,175 @@ def display_set(key, raw):
 _xkb = None
 
 
+# ═══════════════════════════════ keyboard shortcuts ═══════════════════════════════
+# The editable shortcuts are the `shortcuts:begin … shortcuts:end` block in conf/keybinds.lua
+# (defaults); your changes are stored as keys.<id> and generated into settings.lua → binds.
+HYPR_LUA = os.path.join(HYPR, "conf", "keybinds.lua")
+FIXED_KEYS = [
+    ("SUPER + ← ↑ → ↓", "Move focus (up / down also crosses screens)"),
+    ("SUPER + SHIFT + ← ↑ → ↓", "Move window"),
+    ("SUPER + CTRL + ← ↑ → ↓", "Resize window"),
+    ("SUPER + 1 … 0", "Go to workspace 1–10"),
+    ("SUPER + SHIFT + 1 … 0", "Move window to workspace 1–10"),
+    ("SUPER + scroll", "Next / previous workspace"),
+    ("SUPER + drag (left / right)", "Move / resize window"),
+    ("3-finger swipe", "Previous / next workspace"),
+    ("Media · volume · brightness", "Work as labelled, also on the lock screen"),
+]
+MODS = ["SUPER", "CTRL", "ALT", "SHIFT"]
+MOD_BITS = {"SHIFT": 1, "CTRL": 4, "ALT": 8, "SUPER": 64}
+MOD_ALIASES = {"WIN": "SUPER", "META": "SUPER", "LOGO": "SUPER", "MOD4": "SUPER",
+               "CONTROL": "CTRL", "CTL": "CTRL", "MOD1": "ALT"}
+OFF_WORDS = ("", "off", "none", "disable", "disabled")
+
+
+def shortcuts():
+    """[{group, id, default, desc}] from the shortcuts block in conf/keybinds.lua."""
+    rows, group, inside = [], "", False
+    try:
+        lines = open(HYPR_LUA).read().splitlines()
+    except OSError:
+        return rows
+    for line in lines:
+        if "shortcuts:begin" in line:
+            inside = True
+        elif "shortcuts:end" in line:
+            break
+        elif inside:
+            m = re.match(r"\s*-- group: (.+)", line)
+            if m:
+                group = m.group(1).strip()
+                continue
+            m = re.search(r'id\s*=\s*"([^"]+)",\s*key\s*=\s*"([^"]*)",\s*desc\s*=\s*"([^"]*)"', line)
+            if m:
+                rows.append({"group": group, "id": m[1], "default": m[2], "desc": m[3]})
+    return rows
+
+
+def norm_combo(text):
+    """'super+shift+s' / 'Win Shift S' → 'SUPER + SHIFT + S'; '' for off."""
+    if text is None or text.strip().lower() in OFF_WORDS:
+        return ""
+    mods, key = set(), None
+    for p in [p for p in re.split(r"\s*\+\s*|\s+", text.strip()) if p]:
+        u = MOD_ALIASES.get(p.upper(), p.upper())
+        if u in MOD_BITS:
+            mods.add(u)
+        elif key is None:
+            key = p
+        else:
+            raise ValueError(f"more than one key in “{text}” — use modifiers + one key")
+    if key is None:
+        raise ValueError("a shortcut needs a key besides SUPER / CTRL / ALT / SHIFT")
+    if len(key) == 1:
+        key = key.upper()
+    return " + ".join([m for m in MODS if m in mods] + [key])
+
+
+def combo_sig(combo):
+    """(modmask, key) — how Hyprland itself compares binds."""
+    *mods, key = combo.split(" + ")
+    return sum(MOD_BITS[m] for m in mods), key.lower()
+
+
+def shortcut_keys():
+    """{id: effective combo ('' = off)}"""
+    custom = store().data.get("keys", {})
+    return {sc["id"]: custom.get(sc["id"], sc["default"]) for sc in shortcuts()}
+
+
+def shortcut_conflict(sid, combo):
+    """Who else uses combo: a shortcut dict, 'built-in', or None."""
+    if not combo:
+        return None
+    sig = combo_sig(combo)
+    current = shortcut_keys()
+    for sc in shortcuts():
+        if sc["id"] != sid and current[sc["id"]] and combo_sig(current[sc["id"]]) == sig:
+            return sc
+    for b in hypr_json("binds") or []:     # fixed binds (arrows, workspaces, media keys …)
+        if not b.get("description") and not b.get("submap") and not b.get("mouse") \
+                and (b.get("modmask"), str(b.get("key", "")).lower()) == sig:
+            return "built-in"
+    return None
+
+
+def shortcut_check(combo):
+    """Ask Hyprland whether it understands the key (in a throwaway submap, nothing is bound)."""
+    if combo and os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        try:
+            hypr_eval(f'hl.define_submap("nothing-validate", function() hl.bind({lua(combo)}, hl.dsp.exec_cmd("true")) end)')
+        except RuntimeError as e:
+            msg = str(e)
+            raise ValueError(f"Hyprland doesn't know the key in “{combo}”"
+                             + (f" ({msg.split('Unknown keysym:')[1].strip()})" if "Unknown keysym:" in msg else "")) from None
+
+
+def shortcut_set(sid, raw, swap=False):
+    """Change one shortcut, apply it live. swap=True gives a clashing shortcut our old keys."""
+    by_id = {sc["id"]: sc for sc in shortcuts()}
+    if sid not in by_id:
+        raise KeyError(f"unknown shortcut: {sid}  (see `nothing-settings shortcuts`)")
+    combo = norm_combo(raw)
+    shortcut_check(combo)
+    other = shortcut_conflict(sid, combo)
+    s = store()
+    if other == "built-in":
+        raise ValueError(f"{combo} is a built-in shortcut (arrows, workspaces, media keys)")
+    if other:
+        if not swap:
+            raise ValueError(f"{combo} is already “{other['desc']}” — change that one first, or swap")
+        old = shortcut_keys()[sid]
+        _put_shortcut(s, by_id[other["id"]], old)
+    _put_shortcut(s, by_id[sid], combo)
+    s.save()
+    run(["hyprctl", "reload"])
+    return combo or "off"
+
+
+def _put_shortcut(s, sc, combo):
+    if combo == sc["default"]:
+        s.drop("keys." + sc["id"])
+    else:
+        s.put("keys." + sc["id"], combo)
+
+
+MODIFIER_KEYS = {"Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R", "Super_L", "Super_R",
+                 "Meta_L", "Meta_R", "Hyper_L", "Hyper_R", "ISO_Level3_Shift", "ISO_Level5_Shift", "Caps_Lock", "Num_Lock"}
+BARE_OK = re.compile(r"^(F\d+|Print|Pause|Scroll_Lock|Insert|Menu|XF86\w+)$")   # fine without a modifier
+
+
+def combo_from_key_event(ev):
+    """GTK key press → ("combo", "SUPER + S") | ("partial", "SUPER + …") | ("cancel", "") | ("invalid", why)."""
+    from gi.repository import Gdk
+    mods = [m for m, mask in (("SUPER", Gdk.ModifierType.SUPER_MASK | Gdk.ModifierType.MOD4_MASK),
+                              ("CTRL", Gdk.ModifierType.CONTROL_MASK),
+                              ("ALT", Gdk.ModifierType.MOD1_MASK),
+                              ("SHIFT", Gdk.ModifierType.SHIFT_MASK)) if ev.state & mask]
+    # the key without Shift / AltGr applied — that is how Hyprland matches binds
+    keymap = Gdk.Keymap.get_for_display(Gdk.Display.get_default())
+    ok, keyval, *_ = keymap.translate_keyboard_state(ev.hardware_keycode, 0, ev.group)
+    name = Gdk.keyval_name(keyval if ok else ev.keyval) or ""
+    if name in MODIFIER_KEYS:
+        return "partial", " + ".join(mods + ["…"])
+    if name == "Escape" and not mods:
+        return "cancel", ""
+    if not mods and not BARE_OK.match(name):
+        return "invalid", "Add SUPER, CTRL or ALT — a single key would stop you typing it."
+    try:
+        return "combo", norm_combo(" + ".join(mods + [name]))
+    except ValueError as e:
+        return "invalid", str(e)
+
+
+def cheatsheet():
+    """Lines for the Super+F1 cheat-sheet and `nothing-settings shortcuts`."""
+    cur = shortcut_keys()
+    rows = [(cur[sc["id"]], sc["desc"]) for sc in shortcuts() if cur[sc["id"]]] + FIXED_KEYS
+    w = max(len(k) for k, _ in rows)
+    return [f"{k:<{w}}   {d}" for k, d in rows]
+
+
 def xkb():
     """→ (layouts {code: name}, variants {layout: [(code, name)]})"""
     global _xkb
@@ -1020,9 +1194,10 @@ def cli_list():
         sp = store().monitors().get(m["name"]) or monitor_spec(m)
         rows.append((f"display.{m['name']}", f'{sp["mode"]} at {sp["position"]} ×{sp["scale"]}'
                      + (" (disabled)" if sp.get("disabled") else "")))
+    rows += [(f"keys.{sid}", combo or "off") for sid, combo in shortcut_keys().items()]
     w = max(len(k) for k, _ in rows)
     for k, v in rows:
-        mark = "*" if k in SCHEMA and s.has(k) else " "
+        mark = "*" if (k in SCHEMA or k.startswith("keys.")) and s.has(k) else " "
         print(f"{mark} {k:<{w}}  {json.dumps(v) if isinstance(v, bool) else v}")
     print("\n* = changed from the default")
 
@@ -1051,6 +1226,8 @@ def cli(argv):
         elif cmd == "reset":
             reset_setting(argv[1])
             print(f"{argv[1]} reset")
+        elif cmd == "shortcuts":
+            print("\n".join(cheatsheet()))
         elif cmd == "dnd":
             print("Do Not Disturb", "on" if dnd_set(not dnd_get()) else "off")
         elif cmd == "install":
@@ -1931,20 +2108,53 @@ def gui(page):
                lambda e: (app.win.error(e), self.rebuild()))
 
     class KeysPage(Page):
-        title, subtitle = "Keyboard shortcuts", "Super is the Windows key."
+        title, subtitle = "Keyboard shortcuts", "Click a shortcut and press the new keys. Super is the Windows key."
 
         def build(self):
             self.header()
-            path = os.path.join(REPO, "rofi", "scripts", "keybinds.sh")
+            cur, custom = shortcut_keys(), store().data.get("keys", {})
+            card, group = None, None
+            for sc in shortcuts():
+                if sc["group"] != group or card is None:
+                    group = sc["group"]
+                    card = self.section(group or "Shortcuts")
+                combo = cur[sc["id"]]
+                b = button(combo or "Off", lambda sc=sc: self._edit(sc))
+                cls(b, "kbd")
+                if not combo:
+                    cls(b, "off")
+                changed = sc["id"] in custom
+                sub = (f"Default: {sc['default'] or 'off'}" if changed else None)
+                self.row(card, sc["desc"], sub, b)
+            f = self.section("Always available")
+            for keys, what in FIXED_KEYS:
+                self.row(f, what, None, lbl(keys, "kbd"))
+            r = self.section("Reset")
+            self.row(r, "Reset all shortcuts", "Back to the keys this desktop ships with.",
+                     button("Reset all", self._reset_all, "danger"))
+
+        def _edit(self, sc):
+            res = app.win.capture_shortcut(sc["desc"], shortcut_keys()[sc["id"]], sc["default"])
+            if res is None:
+                return
+            combo = res
             try:
-                text = open(path).read()
-                lines = text.split("<<'KEYS'\n", 1)[1].split("\nKEYS", 1)[0].splitlines()
-            except (OSError, IndexError):
-                lines = []
-            c = self.section("Shortcuts")
-            for line in lines:
-                keys, _, what = line.partition("  ")
-                self.row(c, what.strip(), None, lbl(keys.strip().replace(" ", " + ").replace("+ +", "+").replace("·", " · "), "kbd"))
+                other = shortcut_conflict(sc["id"], norm_combo(combo))
+            except ValueError as e:
+                return app.win.error(e)
+            swap = False
+            if isinstance(other, dict):
+                if not app.win.confirm(f"{norm_combo(combo)} is already “{other['desc']}”.\n"
+                                       f"Swap them? “{other['desc']}” gets {shortcut_keys()[sc['id']] or 'no shortcut'}."):
+                    return
+                swap = True
+            bg(lambda: shortcut_set(sc["id"], combo, swap=swap),
+               lambda r: (app.win.toast(f"{sc['desc']}: {r}"), self.rebuild()))
+
+        def _reset_all(self):
+            if not app.win.confirm("Reset every keyboard shortcut to the default?"):
+                return
+            bg(lambda: reset_setting("keys"), lambda _r: (app.win.toast("Shortcuts reset"), self.rebuild()))
 
     class AboutPage(Page):
         title, subtitle = "About", ""
@@ -2125,6 +2335,60 @@ def gui(page):
             d.destroy()
             return text if r == Gtk.ResponseType.OK else None
 
+        def capture_shortcut(self, what, current, default):
+            """Dialog that records a key combination. Returns the combo, "" for off, None for cancel.
+            Hyprland is switched to an empty submap meanwhile, so e.g. SUPER + Q reaches us
+            instead of closing the window."""
+            d = Gtk.Dialog(title="Shortcut", transient_for=self, modal=True)
+            d.add_buttons("Turn off", 1, "Default", 2, "Cancel", Gtk.ResponseType.CANCEL, "Save", Gtk.ResponseType.OK)
+            d.set_response_sensitive(Gtk.ResponseType.OK, False)
+            box = d.get_content_area()
+            box.set_spacing(10)
+            box.set_border_width(20)
+            box.add(lbl(what, "row-title"))
+            box.add(lbl("Press the new keys now.  Esc cancels.", "row-sub"))
+            shown = lbl(current or "Off", "kbd capture", xalign=0.5)
+            box.add(shown)
+            hint = lbl("", "row-sub")
+            box.add(hint)
+            got = {"combo": None}
+
+            def on_key(_w, ev):
+                kind, text = combo_from_key_event(ev)
+                if kind == "partial":
+                    shown.set_text(text)
+                    return True
+                if kind == "cancel":
+                    d.response(Gtk.ResponseType.CANCEL)
+                    return True
+                if kind == "invalid":
+                    hint.set_text(text)
+                    return True
+                combo = text
+                got["combo"] = combo
+                shown.set_text(combo)
+                other = shortcut_conflict(None, combo)
+                hint.set_text("" if other is None or combo == current else
+                              "Built-in shortcut — pick another." if other == "built-in" else
+                              f"Now used by “{other['desc']}” — saving asks to swap.")
+                d.set_response_sensitive(Gtk.ResponseType.OK, other != "built-in" and combo != current)
+                return True
+            d.connect("key-press-event", on_key)
+            d.show_all()
+            run(["hyprctl", "dispatch", 'hl.dsp.submap("nothing-capture")'])
+            try:
+                r = d.run()
+            finally:
+                run(["hyprctl", "dispatch", 'hl.dsp.submap("reset")'])
+                d.destroy()
+            if r == Gtk.ResponseType.OK:
+                return got["combo"]
+            if r == 1:
+                return ""
+            if r == 2:
+                return default
+            return None
+
         def confirm(self, question):
             d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.QUESTION,
                                   buttons=Gtk.ButtonsType.YES_NO, text=question)
@@ -2209,7 +2473,8 @@ def selftest(app, Win, Gtk, page_classes):
                "terminal_font_set", "wallpaper_delete"]
     actions.append("brightness_set")
     for name in actions:
-        g[name] = (lambda n: lambda *a, **k: calls.append((n, a)) or ((0, "", "") if n in ("pkexec", "install_packages") else None))(name)
+        g[name] = (lambda n: lambda *a, **k: calls.append((n, a)) or ((0, "", "") if n in ("pkexec", "install_packages")
+                                                                 else [] if n == "bt_scan" else None))(name)
     real_run = g["run"]
 
     def safe_run(cmd, *a, **k):          # read-only commands pass, anything that changes state is recorded
@@ -2223,6 +2488,7 @@ def selftest(app, Win, Gtk, page_classes):
     # dialogs answer themselves: no password, "no" to questions, revert displays, no file
     Win.ask = lambda self, *a, **k: calls.append(("dialog", a)) or None
     Win.confirm = lambda self, *a, **k: calls.append(("dialog", a)) or False
+    Win.capture_shortcut = lambda self, *a, **k: calls.append(("dialog", a)) or None
     Win.confirm_countdown = lambda self, *a, **k: calls.append(("dialog", a)) or False
     page_classes["appearance"][2]._add = lambda self: calls.append(("file-chooser", ()))
     page_classes["about"][2]._edit_local = lambda self: calls.append(("edit-local", ()))

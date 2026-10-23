@@ -67,8 +67,9 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
 - **Settings app** (`Super` `I`) — Network, Bluetooth, Sound, Displays, Appearance (mode, accent,
   border, fonts, text and terminal size, wallpapers with add / delete, opacity, corners, blur),
-  Night mode, Notifications, Keyboard & mouse, Power & lock, Login screen, Shortcuts, About.
-  Every option is also a command: `nothing-settings set appearance.rounding 12`.
+  Night mode, Notifications, Keyboard & mouse, Power & lock, Login screen, Keyboard shortcuts
+  (click one, press the new keys), About. Every option is also a command:
+  `nothing-settings set appearance.rounding 12`, `nothing-settings set keys.terminal "SUPER + T"`.
 - **One lock screen** — hyprlock only: date above a large SF Pro Rounded clock, blur, battery /
   AC readout, keyboard-layout chip. Optionally boots straight into it (greetd, Hyprland started
   already locked).
@@ -177,6 +178,9 @@ dotfiles/
 
 ## Keybindings
 
+The defaults — change any of them in **Settings → Keyboard shortcuts** (click, press the new keys);
+`Super` `F1` always shows the keys that are active.
+
 | Keys | Action |
 |---|---|
 | `Super` `Return` | Terminal (kitty) |
@@ -193,14 +197,15 @@ dotfiles/
 | `Super` `Q` | Close window |
 | `Super` `Space` | Toggle floating |
 | `Super` `F` | Fullscreen |
-| `Super` `S` | Scratchpad (where *minimise* sends windows) |
+| `Super` `S` · `Super` `Alt` `S` | Scratchpad: show / hide · move window there (*minimise* sends windows there too) |
 | `Super` `V` | Clipboard history |
 | `Super` `←↑→↓` | Focus (up/down crosses monitors) |
 | `Super` `Shift` `←↑→↓` | Move window |
 | `Super` `Ctrl` `←↑→↓` | Resize window |
 | `Alt` `Tab` / `Super` `Tab` | Cycle windows / previous workspace |
 | `Super` `1`–`0` · `Super` `Shift` `1`–`0` | Workspace · move window there |
-| `Super` `Shift` `S` · `Shift` `Print` · `Super` `Shift` `Print` | Region → clipboard · full → ~/Pictures · record |
+| `Super` `Shift` `S` (or `Print`) | Screenshot of a region → clipboard |
+| `Shift` `Print` · `Super` `Shift` `Print` | Screenshot of the screen → ~/Pictures · record the screen |
 | `Super` `Shift` `R` | Reload the desktop |
 | 3‑finger swipe | Previous / next workspace (touchpad and touchscreen) |
 | Brightness keys · Power key | Brightness (with popup) · session menu — laptop |

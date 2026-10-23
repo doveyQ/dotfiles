@@ -72,8 +72,16 @@ project uses [Semantic Versioning](https://semver.org/).
 - Settings are stored per machine in `~/.config/nothing/` (generated `settings.lua`,
   `hypridle.conf`, `hyprpaper.conf`) — outside the repo; they win over the machine file.
 - `make selftest`: opens every Settings page and fires every control with a stubbed backend.
+- **Editable keyboard shortcuts**: Settings → Keyboard shortcuts — click a shortcut and press
+  the new keys (Hyprland pauses its own shortcuts meanwhile, so even `Super+Q` can be recorded).
+  Clashes offer a swap, unknown keys are rejected, *Default* / *Turn off* / *Reset all*. Same from
+  the CLI: `nothing-settings shortcuts`, `set keys.<id> "SUPER + T"`, `reset keys`.
+  The defaults are one table in `hyprland.lua`; the `Super+F1` cheat-sheet is generated from it.
 
 ### Changed
+- **Screenshot of a region is now `Super+Shift+S`** (`Print` still works); moving a window to
+  the scratchpad moved from `Super+Shift+S` to `Super+Alt+S`. Cancelling the region no longer
+  shows an error; full-screen shots capture the screen you're on and also go to the clipboard.
 - The installer now sets up the **Nothing login** (greetd → Hyprland started locked by
   hyprlock) by default after asking; `--no-boot-lock` keeps the distribution's login screen.
   Shared helper `system/nothing-login.sh` (also used by Settings → Login screen).

@@ -90,6 +90,11 @@ list.card row:hover { background: transparent; }
   padding: 4px 10px;
 }
 
+button.pill.kbd { font-family: "Ndot 55", "JetBrainsMono Nerd Font", monospace; font-size: 11px; letter-spacing: 1px; border-radius: 8px; padding: 4px 12px; }
+button.pill.kbd:hover { border-color: @red; }
+button.pill.kbd.off { color: @dim; }
+.kbd.capture { font-size: 18px; padding: 16px 24px; border-radius: 14px; }
+
 /* ── controls ── */
 button.pill {
   background: @card2;

@@ -333,7 +333,7 @@ A settings app modelled on macOS System Settings. Every page changes things **li
 | **Keyboard & mouse** | layout + variant (all XKB layouts), key repeat, pointer speed, acceleration, natural scrolling; touchpad tap / scrolling / disable-while-typing on laptops |
 | **Power & lock** | lock / screens-off / sleep timers, warn & dim before locking, power mode (laptops), lock now |
 | **Login screen** | boot straight into the lock screen (see §2) |
-| **Shortcuts** | every keybinding |
+| **Keyboard shortcuts** | every shortcut — click one and press the new keys; clashes offer a swap; Default / Turn off / Reset all |
 | **About** | system info, update the dotfiles, reload the desktop, edit the machine file, reset everything |
 
 Missing helper programs show an **Install** button (asks for your password).
@@ -420,8 +420,8 @@ glass isn't possible there; the menu bar, Control Center and widgets are blurred
 
 | Keys | Action |
 |---|---|
-| `Super` `Shift` `S` | select region → clipboard |
-| `Shift` `Print` | whole screen → `~/Pictures/` |
+| `Super` `Shift` `S` or `Print` | select a region → clipboard (`Esc` cancels) |
+| `Shift` `Print` | the screen you're on → `~/Pictures/` (and the clipboard) |
 | `Super` `Shift` `Print` | start/stop recording (select region; `Esc` = whole main screen) → `~/Videos/` |
 | `Super` `V` | clipboard history |
 
@@ -568,7 +568,8 @@ What the desktop does to keep your data yours:
 | light / dark, accent, border | `nothing-theme toggle` / `accent …` / `border …` · `Super` `Shift` `T` · Control Center · Settings → Appearance |
 | desktop widgets | drag / right-click on the desktop, Settings → Appearance, `nothing-shell widgets …`; new kinds: a `Widget` subclass in `nothing-shell.py` + `WIDGET_TYPES` |
 | gaps, borders, rounding, shadows, blur, animations | **Settings → Appearance** (defaults: `hypr/conf/look.lua`; borderless windows: `borderless = true` in `theme.lua`) |
-| keybindings, default apps | `hypr/conf/keybinds.lua` (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
+| your keyboard shortcuts | **Settings → Keyboard shortcuts**: click one, press the new keys (or `nothing-settings set keys.<id> "SUPER + T"`; `nothing-settings shortcuts` lists them). Stored in `~/.config/nothing/`, per machine |
+| the default shortcuts (for everyone), default apps | `hypr/conf/keybinds.lua` → the `shortcuts:begin … end` table — one line per shortcut; the Settings app and the `Super+F1` cheat-sheet read it, so nothing else needs updating (README table aside) |
 | autostart, environment | `hypr/conf/autostart.lua` |
 | window / layer rules | `hypr/conf/rules.lua` |
 | idle / lock / suspend times | **Settings → Power & lock** (default: `hypr/hypridle.conf`) |
