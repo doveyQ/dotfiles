@@ -28,13 +28,33 @@ return function(_)
         center = true,
     })
 
-    -- frosted glass behind every shell surface (GTK can't blur — Hyprland does)
-    for _, ns in ipairs({ "waybar", "nothing-island", "nothing-control", "swaync-notification-window", "rofi", "nwg-dock" }) do
+    -- media, games and screen sharing stay fully opaque despite the 0.96 / 0.90 window opacity
+    hl.window_rule({
+        name   = "opaque-media",
+        match  = { class = "^(mpv|vlc|org.gnome.Loupe|imv|steam_app_.*|gamescope|obs|com.obsproject.Studio)$" },
+        opaque = true,
+    })
+    hl.window_rule({
+        name   = "opaque-pip",
+        match  = { title = "^(Picture-in-Picture|Bild-im-Bild)$" },
+        opaque = true,
+    })
+    hl.window_rule({
+        name   = "opaque-fullscreen",
+        match  = { fullscreen = true },
+        opaque = true,
+    })
+
+    -- frosted glass behind every shell surface (GTK can't blur — Hyprland does). ignore_alpha
+    -- keeps the blur off fully transparent pixels (rounded corners, gaps between widgets).
+    for _, ns in ipairs({ "waybar", "nothing-island", "nothing-control", "nothing-widgets",
+                          "swaync-notification-window", "swaync-control-center", "rofi",
+                          "nwg-dock", "gtk-layer-shell", "notifications" }) do
         hl.layer_rule({
             name         = "glass-" .. ns,
             match        = { namespace = "^" .. ns .. "$" },
             blur         = true,
-            ignore_alpha = 0.25,
+            ignore_alpha = 0.2,
         })
     end
     hl.layer_rule({ name = "control-slide", match = { namespace = "^nothing-control$" }, animation = "slide right" })

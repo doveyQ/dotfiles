@@ -9,9 +9,8 @@ sleep 0.4
 swaync >/dev/null 2>&1 &
 ~/.local/bin/nothing-shell >/dev/null 2>&1 &
 waybar >/dev/null 2>&1 &
-waybar -c $cfg/waybar/desktop.jsonc -s $cfg/waybar/desktop.css >/dev/null 2>&1 &
 command -v nwg-dock-hyprland >/dev/null && nwg-dock-hyprland -d -i 36 -mb 10 ${NOTHING_OUTPUT:+-o "$NOTHING_OUTPUT"} -s nothing.css >/dev/null 2>&1 &
 pkill -x hypridle; sleep 0.2; ~/.config/hypr/scripts/idle.sh >/dev/null 2>&1 &
 disown -a
 sleep 0.8
-notify-send -a Desktop "Desktop reloaded" "island · control center · bar · wallpaper"
+notify-send -a Desktop "Desktop reloaded" "Menu bar · Control Center · widgets · wallpaper"

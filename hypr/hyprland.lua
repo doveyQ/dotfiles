@@ -1,6 +1,6 @@
--- ┏━╸┏━┓┏━┓┏━╸┏┓╻╻ ╻┏━┓┏━╸┏━╸┏┓╻
--- ┃  ┃ ┃┣━┛┣╸ ┃┗┫┣━┫┣━┫┃╺┓┣╸ ┃┗┫   Copenhagen — warm-neutral Nordic minimalism
--- ┗━╸┗━┛╹  ┗━╸╹ ╹╹ ╹╹ ╹┗━┛┗━╸╹ ╹   Hyprland 0.56+ (Lua config)
+-- ┏┳┓┏━┓┏━╸┏━┓┏━┓
+-- ┃┃┃┣━┫┃  ┃ ┃┗━┓   macOS-style Hyprland — frosted glass, SF Pro, light & dark
+-- ╹ ╹╹ ╹┗━╸┗━┛┗━┛   Hyprland 0.56+ (Lua config)
 --
 -- Hyprland ≥ 0.56 reads hyprland.lua (the old hyprland.conf syntax is gone).
 -- Note: on 0.56 `hyprctl dispatch <name> <args>` no longer works — dispatchers are
@@ -14,7 +14,8 @@
 --   look.lua       borders, rounding, shadows, blur, animations
 --   rules.lua      window and layer rules
 --   keybinds.lua   programs and every key binding
--- Colours and fonts come from the active theme: ~/.config/hypr/theme → themes/<name>/
+-- Colours and fonts come from the active theme: ~/.config/hypr/theme → themes/mac-dark or
+-- themes/mac-light (git-ignored link, switched by `nothing-theme toggle` / Super+Shift+T).
 
 local home    = os.getenv("HOME")
 local hypr    = home .. "/.config/hypr"
@@ -30,7 +31,7 @@ local ctx = {
     hypr    = hypr,
     bin     = home .. "/.local/bin",
     scripts = hypr .. "/scripts",
-    theme   = dofile(hypr .. "/theme/theme.lua"),
+    theme   = optional(hypr .. "/theme/theme.lua") or dofile(hypr .. "/themes/mac-dark/theme.lua"),
 
     -- Everything specific to one computer lives in ~/.config/hypr/hyprland.local.lua
     -- (git-ignored — start from hypr/examples/). It returns a table, every field optional:

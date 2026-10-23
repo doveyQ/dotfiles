@@ -25,6 +25,7 @@ return function(ctx)
     hl.bind(mod .. " + A",            exec(bin .. "/nothing-shell island toggle"))
     hl.bind(mod .. " + SHIFT + N",    exec(bin .. "/nothing-settings dnd"))
     hl.bind(mod .. " + CTRL + N",     exec(bin .. "/nothing-night toggle"))
+    hl.bind(mod .. " + SHIFT + T",    exec(bin .. "/nothing-theme toggle"))   -- light ↔ dark
     hl.bind(mod .. " + V",            exec("cliphist list | rofi -dmenu -theme ~/.config/rofi/nothing.rasi | cliphist decode | wl-copy"))
     hl.bind(mod .. " + F1",           exec(bin .. "/nothing-keybinds"))
     hl.bind(mod .. " + L",            exec("loginctl lock-session"))   -- → hypridle → hyprlock
@@ -61,7 +62,7 @@ return function(ctx)
     hl.bind(mod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
     hl.bind(mod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
 
-    -- screenshots / recording (a clay dot appears in the bar while recording)
+    -- screenshots / recording (a red dot appears in the bar while recording)
     hl.bind(mod .. " + SHIFT + S",     exec("grim -g \"$(slurp)\" - | wl-copy && notify-send -a Screenshot 'Region copied'"))
     hl.bind("SHIFT + Print",           exec("grim ~/Pictures/$(date +%F_%H-%M-%S).png && notify-send -a Screenshot 'Saved to ~/Pictures'"))
     hl.bind(mod .. " + SHIFT + Print", exec(scripts .. "/record.sh toggle"))

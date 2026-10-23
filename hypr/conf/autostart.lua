@@ -31,9 +31,8 @@ return function(ctx)
         hl.exec_cmd(scripts .. "/idle.sh")                        -- hypridle: the ONLY idle/lock manager → hyprlock
         hl.exec_cmd("hyprsunset -i")                              -- night mode backend (nothing-night drives it)
         hl.exec_cmd("swaync")                                     -- notification popups
-        hl.exec_cmd(bin .. "/nothing-shell")                      -- island (bar centre) + quick settings
-        hl.exec_cmd("waybar")                                     -- the top bar
-        hl.exec_cmd("waybar -c ~/.config/waybar/desktop.jsonc -s ~/.config/waybar/desktop.css") -- desktop widgets
+        hl.exec_cmd(bin .. "/nothing-shell")                      -- island, Control Center, desktop widgets
+        hl.exec_cmd("waybar")                                     -- the menu bar
         hl.exec_cmd("nwg-dock-hyprland -d -i 36 -mb 10 " .. (machine.main and ("-o " .. machine.main) or "") .. " -s nothing.css")
         hl.exec_cmd("wl-paste --watch cliphist store")
         hl.exec_cmd(scripts .. "/battery-warn.sh")                -- low-battery popups (exits without a battery)

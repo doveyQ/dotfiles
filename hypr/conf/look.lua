@@ -1,13 +1,13 @@
--- Look and feel: macOS-like depth — hairline edges, soft rounded corners, deep diffused
--- shadows, frosted glass.  Colours come from the theme (~/.config/hypr/theme/theme.lua).
+-- Look and feel: macOS — hairline edges, 14px continuous corners, deep soft shadows and
+-- frosted, vibrant glass.  Colours come from the theme (~/.config/hypr/theme/theme.lua).
 return function(ctx)
     local t = ctx.theme
     local border = t.borderless and 0 or (t.border_size or 1)
 
     hl.config({
         general = {
-            gaps_in     = 6,
-            gaps_out    = 12,
+            gaps_in     = 5,
+            gaps_out    = 10,
             border_size = border,
             col = {
                 active_border   = t.border_active,
@@ -21,16 +21,16 @@ return function(ctx)
 
         decoration = {
             rounding       = 14,
-            rounding_power = 3.0,   -- continuous-curve corners, like macOS windows
-            active_opacity   = 1.0,
-            inactive_opacity = 0.96,
+            rounding_power = 2.6,   -- continuous-curve corners, like macOS windows
+            active_opacity   = 0.96,
+            inactive_opacity = 0.90,
             dim_special      = 0.3,
 
             shadow = {
                 enabled        = true,
-                range          = 28,
-                render_power   = 2,      -- low power = wide, soft falloff
-                offset         = "0 8",  -- light from above
+                range          = 30,
+                render_power   = 4,
+                offset         = "0 10", -- light from above
                 color          = t.shadow,
                 color_inactive = t.shadow_inactive,
             },
@@ -44,16 +44,19 @@ return function(ctx)
                 color_inactive = "rgba(00000000)",
             },
 
+            -- frosted glass: strong blur + vibrancy (saturates what shows through)
             blur = {
                 enabled           = true,
-                size              = 6,
-                passes            = 3,
-                noise             = 0.015,
-                contrast          = 0.95,
-                brightness        = 0.9,
-                vibrancy          = 0.12,  -- a little colour through the glass
+                size              = 8,
+                passes            = 4,
+                noise             = 0.02,
+                contrast          = 1.0,
+                brightness        = t.blur_brightness or 0.9,
+                vibrancy          = 0.35,
+                vibrancy_darkness = t.blur_vibrancy_darkness or 0.2,
                 popups            = true,
                 new_optimizations = true,
+                xray              = false,
             },
         },
 
@@ -75,7 +78,7 @@ return function(ctx)
         animations = { enabled = true },
     })
 
-    -- fluid: gentle ease-out + a soft spring for windows
+    -- macOS-like motion: quick ease-out + a soft spring for windows
     hl.curve("fluid",  { type = "bezier", points = { {0.22, 1}, {0.36, 1} } })
     hl.curve("linear", { type = "bezier", points = { {0, 0}, {1, 1} } })
     hl.curve("soft",   { type = "spring", mass = 1, stiffness = 210, dampening = 26 })
