@@ -6,25 +6,27 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed — Copenhagen redesign
-- **New look**: warm-neutral Nordic palette (chalk · stone · smoke · sage · clay · sand ·
-  slate), smoky frosted glass, no red, no pure white. Windows get 1px low-contrast outlines
-  (or none: `borderless = true`), 14px continuous-curve corners and deep soft shadows; the red
-  focus glow is gone (optional sage *Soft glow* in Settings).
-- **Typography**: SF Pro Text / Display and SF Mono replace the Ndot dot-matrix fonts;
-  `fontconfig/` maps them to Inter / Inter Display / JetBrains Mono when Apple's fonts aren't
-  installed. The installer no longer downloads the Nothing fonts.
-- **One continuous top bar** instead of separate pills: launcher · island (now the bar's
-  transparent centre) · hover drawer (tray, CPU, memory) · network speed · Wi-Fi · clipboard ·
-  battery · notifications · quick settings · power.
-- **Themes**: every colour and font lives in `hypr/themes/<name>/` (`theme.lua`,
-  `palette.css`, `palette.rasi`, `hyprlock.conf`, `kitty.conf`, `fonts.conf`); the symlink
-  `hypr/theme` selects the active one. nothing-shell reads its drawing colours from the palette.
-- **Modular Hyprland config**: `hyprland.lua` is now a loader for `hypr/conf/`
-  (`monitors`, `autostart`, `input`, `look`, `rules`, `keybinds`).
-- Restyled to match: island + control center, Settings app, SwayNC, rofi launcher / session
-  menu, dock, kitty, hyprlock, desktop widgets. Title-case labels instead of all-caps.
-- New default wallpaper `hypr/wallpapers/copenhagen.jpg`.
+### Changed — macOS redesign
+- **macOS look** in a **Light** and a **Dark** mode: frosted vibrant glass (Hyprland blur 8×4,
+  vibrancy 0.35, explicit `glass-…` layer rules for the bar, island, Control Center, widgets,
+  notifications, rofi, dock and `gtk-layer-shell`), Apple system colours, hairline window
+  edges, deep soft shadows, 0.96 / 0.90 window opacity (media and fullscreen stay opaque).
+- **Light / Dark switch**: `nothing-theme toggle|light|dark|status`, `Super+Shift+T`, a Control
+  Center tile and Settings → Appearance. Swaps `hypr/theme` → `themes/mac-dark|mac-light`
+  (now git-ignored) and live-reloads Hyprland, Waybar, SwayNC, nothing-shell, kitty, the dock,
+  GTK `color-scheme` and the wallpaper.
+- **Menu bar**: one continuous bar — Apple menu (About, Settings, Force Quit, Sleep, Restart,
+  Shut Down, Lock, Log Out), bold app name, window title, workspace dots, hover drawer, network
+  speed, Bluetooth, Wi-Fi, battery, clipboard, Control Center, `Fri 23 Oct  1:07 PM`.
+- **Control Center** rebuilt like macOS: connectivity module, Focus, Night Shift, Dark Mode,
+  sound slider, CPU graph, memory bar, thermals, Notification Center cards, power buttons.
+- **Desktop widgets** moved from a second Waybar into nothing-shell and drawn with cairo:
+  Weather (sky gradients), analog Clock, Calendar, System (activity rings).
+- **SF Pro** typography (`hypr/themes/typography.css`): `scripts/install-sf-fonts.sh` unpacks
+  Apple's `SF-*.dmg` with 7-Zip; `hypr/themes/fonts.conf` falls back to Inter / JetBrains Mono.
+- Settings app: translucent window, frosted sidebar, traffic lights, title-case headings.
+- Spotlight-style launcher, macOS lock screen, Terminal-like kitty colours, new dark / light
+  wallpapers. `hyprland.lua` is a loader for `hypr/conf/{monitors,autostart,input,look,rules,keybinds}.lua`.
 
 ### Added
 - **Settings app** (`Super+I`, launcher entry *Settings*): Network, Bluetooth, Sound, Displays,

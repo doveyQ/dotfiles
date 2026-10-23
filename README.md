@@ -2,12 +2,12 @@
 
 # ● nothing — dotfiles
 
-**A Copenhagen‑interior Hyprland desktop: warm stone and oat, smoky glass, SF Pro type and muted earth accents.**
+**A macOS‑style Hyprland desktop: frosted vibrant glass, SF Pro, Apple system colours, Light and Dark mode.**
 
 [![CI](https://github.com/doveyQ/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/doveyQ/dotfiles/actions/workflows/ci.yml)
 ![Hyprland](https://img.shields.io/badge/Hyprland-0.56%2B%20·%20Lua-000000?logo=hyprland&logoColor=white)
 ![Arch](https://img.shields.io/badge/Arch%20%2F%20EndeavourOS-000000?logo=archlinux&logoColor=white)
-[![License: MIT](https://img.shields.io/badge/license-MIT-9dad94)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-007aff)](LICENSE)
 
 EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
@@ -35,17 +35,23 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
 ## Features
 
-- **One floating glass bar** — launcher on the left, the island in the centre, and on the right
-  a hover drawer (tray · CPU · memory), network speed, Wi‑Fi, clipboard, notifications,
-  quick settings and the session menu.
-- **Dynamic island** (`nothing-shell`) — the bar's centre: workspace dots, weather and the
-  clock. Hover (or click) and it morphs into a panel: big clock, weather with a
+- **macOS menu bar** — one frosted bar:  Apple menu (About, Settings, Force Quit, Sleep,
+  Restart, Shut Down, Lock, Log Out) · bold app name · window title · workspace dots in the
+  centre · hover drawer (tray, CPU, memory) · network speed · Bluetooth · Wi‑Fi · battery ·
+  clipboard · Control Center · `Fri 23 Oct  1:07 PM`.
+- **Light & Dark mode** — `Super` `Shift` `T`, the Control Center tile, Settings → Appearance or
+  `nothing-theme toggle`: menu bar, Control Center, widgets, notifications, launcher, dock,
+  Settings, kitty, GTK apps, lock screen and wallpaper switch live.
+- **Desktop widgets** — Weather (sky gradient for the current condition), analog Clock,
+  Calendar (month grid) and System (CPU / memory / disk activity rings + thermals).
+- **Dynamic island** (`nothing-shell`) — the workspace dots in the bar's centre; hover them for a
+  panel with clock, weather, calendar, media and volume. Hover (or click) and it morphs into a panel: big clock, weather with a
   3‑day forecast, calendar, MPRIS media player (Spotify, Firefox, Chromium/YouTube, Netflix …)
   with album art, dot progress bar and controls, volume slider, network / Wi‑Fi / Bluetooth.
-  A tiny animated dot equaliser shows while music plays; a breathing clay dot while recording.
+  A tiny animated dot equaliser shows while music plays; a pulsing red dot while recording.
   Hidden automatically when a window is fullscreen.
-- **Quick settings / control center** — live dot CPU history graph, RAM bar, CPU/GPU/SSD thermals
-  (tiles warm to clay when hot), Wi‑Fi / Bluetooth / Silent / Mic toggles, notification history
+- **Control Center** — Wi‑Fi · Bluetooth · Microphone, Focus, Night Shift, Dark Mode, sound
+  slider, live CPU graph, memory bar, CPU/GPU/SSD thermals, Notification Center history
   with per‑item dismiss and clear‑all, and power actions with two‑step confirm for
   destructive ones.
 - **Power overlay** — full‑screen dim with five tiles and single‑key accelerators.
@@ -56,10 +62,10 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
   schedule (presets or exact times). Settings, control-center tile or `Super` `Ctrl` `N`.
 - **Nothing login** — boots straight into the Nothing lock screen instead of the standard
   login screen (greetd; on by default, switch in Settings → Login screen).
-- **One lock screen** — hyprlock only: large thin SF Pro clock, blur, battery/AC readout,
-  now‑playing, keyboard‑layout chip, frosted password pill.
-- **Swappable theme** — every colour and font lives in `hypr/themes/<name>/`; the active theme is
-  the symlink `hypr/theme`. SF Pro / SF Mono fall back to Inter / JetBrains Mono via fontconfig.
+- **One lock screen** — hyprlock only: date above a large SF Pro Rounded clock, blur, battery/AC
+  readout, now‑playing, keyboard‑layout chip, frosted password pill.
+- **SF Pro everywhere** — `scripts/install-sf-fonts.sh` unpacks Apple's `SF-Pro.dmg` (and
+  `SF-Mono.dmg`) from `~/Downloads`; without them fontconfig falls back to Inter / JetBrains Mono.
 - **Austrian German, no dead keys** everywhere: Hyprland, hyprlock, login screen, TTY.
 - **Works on any machine out of the box** — every screen at its preferred mode. Monitors, main
   screen and devices go in one git-ignored file, `~/.config/hypr/hyprland.local.lua`; start from
@@ -105,8 +111,9 @@ What it does:
 2. **System** — `localectl` keymap `at` / `nodeadkeys` (X11 + login screen) and
    `de-latin1-nodeadkeys` (TTY); enables `bluetooth` and `NetworkManager`; warns about other
    lockers (swaylock, swayidle, xss-lock) so hyprlock is the only one.
-3. **Fonts** — checks for Apple's SF Pro (optional, AUR `apple-fonts`); without it the theme's
-   fontconfig file maps SF Pro → Inter and SF Mono → JetBrains Mono.
+3. **Fonts** — unpacks Apple's SF fonts from `~/Downloads/SF-*.dmg` (download them from
+   [developer.apple.com/fonts](https://developer.apple.com/fonts/)) into `~/.local/share/fonts/SF-Pro`;
+   without them `hypr/themes/fonts.conf` maps SF Pro → Inter and SF Mono → JetBrains Mono.
 4. **Configs** — existing `~/.config/<dir>` folders are moved to `~/.config-backup/<timestamp>/`,
    then symlinked to this repo. Helper commands go to `~/.local/bin`, launcher entries to
    `~/.local/share/applications`.
@@ -130,21 +137,22 @@ dotfiles/
 ├── hypr/                → ~/.config/hypr
 │   ├── hyprland.lua     loader (Hyprland ≥ 0.56 uses Lua, not hyprland.conf)
 │   ├── conf/            monitors · autostart · input · look · rules · keybinds (.lua)
-│   ├── themes/          copenhagen/: theme.lua · palette.css · palette.rasi · hyprlock.conf · kitty.conf · fonts.conf
-│   ├── theme            → themes/copenhagen  (the active theme — switch by repointing it)
+│   ├── themes/          mac-dark/ · mac-light/ (theme.lua · palette.css · palette.rasi · hyprlock.conf ·
+│   │                    kitty.conf · wallpaper.jpg) · typography.css · fonts.conf (shared)
+│   ├── theme            → themes/mac-dark|mac-light  (git-ignored; switched by nothing-theme)
 │   ├── hyprlock.conf    lock screen
 │   ├── hypridle.conf    idle → (dim) → lock → screens off → suspend
 │   ├── examples/        machine files to copy to hyprland.local.lua (desktop, laptop)
 │   ├── hyprpaper.conf
 │   ├── wallpapers/
 │   └── scripts/         record · battery · nowplaying · nothing-reload · brightness · autorotate
-├── nothing-shell/       → ~/.config/nothing-shell   (island + control center, Python/GTK3)
-├── waybar/              → ~/.config/waybar   (the top bar, desktop widgets, scripts/)
+├── nothing-shell/       → ~/.config/nothing-shell   (island, Control Center, desktop widgets — Python/GTK3)
+├── waybar/              → ~/.config/waybar   (the menu bar, scripts/)
 ├── swaync/              → ~/.config/swaync   (notification popups)
 ├── rofi/                → ~/.config/rofi     (launcher, power menu, cheat-sheet, scripts/)
 ├── kitty/               → ~/.config/kitty
 ├── nwg-dock-hyprland/   → ~/.config/nwg-dock-hyprland
-├── fontconfig/          → ~/.config/fontconfig  (includes the active theme's font fallbacks)
+├── fontconfig/          → ~/.config/fontconfig  (includes hypr/themes/fonts.conf: SF font fallbacks)
 ├── applications/        → ~/.local/share/applications  (Settings, Power Menu)
 ├── assets/previews/     README screenshots
 └── .github/             CI workflow · issue & PR templates
@@ -157,11 +165,12 @@ dotfiles/
 | `Super` `Return` | Terminal (kitty) |
 | `Super` `D` / `Super` `R` | App launcher |
 | `Super` `I` | Settings |
-| `Super` `N` | Control center |
+| `Super` `N` | Control Center |
 | `Super` `A` | Pin the dynamic island open |
 | `Super` `Shift` `X` | Power menu — `P` power off · `R` reboot · `S` sleep · `L` lock · `E` log out · `Esc` |
 | `Super` `L` | Lock |
 | `Super` `Ctrl` `N` | Night mode on / off |
+| `Super` `Shift` `T` | Light ↔ Dark mode |
 | `Super` `Q` | Close window |
 | `Super` `Space` | Toggle floating |
 | `Super` `F` | Fullscreen |
@@ -184,15 +193,17 @@ dotfiles/
   It's git-ignored, so every computer keeps its own and `git pull` never conflicts.
   Bar on one screen only: `waybar/local.example.jsonc` → `~/.config/waybar/local.jsonc`.
 - **Weather location**: `NOTHING_WEATHER_LOCATION=Vienna` — default is IP‑based.
-- **Colours & fonts**: one folder per theme in `hypr/themes/`. `palette.css` feeds every GTK
-  surface (bar, island, quick settings, Settings app, dock, notifications), `palette.rasi` rofi,
-  `theme.lua` Hyprland, `hyprlock.conf` the lock screen, `kitty.conf` the terminal,
-  `fonts.conf` the font fallbacks. Copenhagen: chalk `#e9e4da` · stone `#a39c91` ·
-  smoke `#1e1c1a` · sage `#9dad94` · clay `#c4917a` · sand `#d8c6a5` · slate `#8b9db0`.
-- **New theme**: `cp -r hypr/themes/copenhagen hypr/themes/mine`, edit, then
-  `ln -sfn themes/mine hypr/theme && nothing-reload`.
-- **Window look** (border, rounding, shadows, blur): `hypr/conf/look.lua`; `borderless = true` in
-  the theme drops the outlines and keeps only the shadows.
+- **Colours**: `hypr/themes/mac-dark/` and `mac-light/` define the same names. `palette.css`
+  feeds every GTK surface (menu bar, island, Control Center, widgets, Settings app, dock,
+  notifications), `palette.rasi` rofi, `theme.lua` Hyprland, `hyprlock.conf` the lock screen,
+  `kitty.conf` the terminal. Apple system colours: blue `#007AFF` · green `#34C759` ·
+  orange `#FF9500` · red `#FF3B30` · indigo `#5856D6` (dark mode uses Apple's brighter variants).
+- **Fonts**: `hypr/themes/typography.css` (GTK) and the `$font_*` / `font-*` lines of the
+  hyprlock / rofi palettes.
+- **Light / Dark**: `nothing-theme toggle|light|dark|status` — or `Super` `Shift` `T`.
+- **Window look** (border, rounding, shadows, blur, vibrancy, opacity): `hypr/conf/look.lua`;
+  `borderless = true` in `theme.lua` drops the outlines and keeps only the shadows. Media and
+  fullscreen windows stay opaque (`hypr/conf/rules.lua`).
 - After editing nothing‑shell CSS: `nothing-shell reload-css`.
 
 ## Notes & troubleshooting
@@ -216,7 +227,7 @@ see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE). Apple's SF fonts are not included and keep their own license.
+[MIT](LICENSE). Apple's SF fonts are not included and keep Apple's license.
 
 ## Credits
 

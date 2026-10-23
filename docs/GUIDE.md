@@ -18,19 +18,20 @@ New here? Read **1 → 3**. Changing things? **5 → 7**. Something broken? **9*
 
 ## 1. What this is
 
-A complete Hyprland desktop in a **Copenhagen-interior** style: warm stone and oat tones,
-smoky frosted glass, Apple's SF Pro type (Inter as the free fallback) and muted earth
-accents — sage for *on / active*, sand for *warning*, clay for *live / critical*. No red,
-no pure white. Hairline window edges and soft, deep shadows give macOS-like depth.
+A complete Hyprland desktop modelled on **macOS** (Sonoma / Sequoia): one frosted menu bar,
+vibrant blurred glass, Apple's SF Pro type, the Apple system colours (blue for *on / active*,
+orange for *warning*, red for *recording / destructive*), Control Center, desktop widgets,
+hairline window edges with deep soft shadows — in a **Light** and a **Dark** mode
+(`Super` `Shift` `T`).
 
 ```
 ┌───────────────────────────────── main screen ────────────────────────────────────┐
-│╭[tux]─────────────── ▬ · · · ·  ☀ 15°  11:32 ──────── ‹ ↓↑ 󰤨 📋 🔔 ⚙ ⏻ ─╮│  ← one bar
-│  ╰ waybar               ╰ nothing-shell island (bar centre)   ╰ waybar right side │
+│╭  Firefox  Page title ────── ▬ · · · · ───── ‹ ↓↑ ᛒ 󰤨 📋 ⚙  Fri 23 Oct 1:07 PM╮│  ← menu bar
+│  ╰ waybar                  ╰ nothing-shell island (bar centre)   ╰ waybar right side │
 │                                                                                  │
-│ ┌ weather ┐                                                   MON, 07 OCT        │
-│ │ cards   │   (desktop widgets: waybar on the background layer)  12:27  ← SF Pro  │
-│ └─────────┘                                                   CPU ●●○○  RAM ●●○  │
+│ ┌Weather┐┌Clock┐                                                                 │
+│ ├ Calendar ────┤   (desktop widgets: nothing-shell, bottom layer, under windows)   │
+│ └ System ──────┘                                                                   │
 │                                                                                  │
 │                      ┌──────── nwg-dock (auto-hide) ────────┐                    │
 └──────────────────────────────────────────────────────────────────────────────────┘
@@ -39,9 +40,9 @@ no pure white. Hairline window edges and soft, deep shadows give macOS-like dept
 | Component | Role | Config |
 |---|---|---|
 | **Hyprland** | compositor, windows, workspaces, keybinds | `hypr/hyprland.lua` → `hypr/conf/*.lua` |
-| **Theme** | every colour and font, one folder per theme | `hypr/themes/<name>/` (active: `hypr/theme`) |
-| **nothing-shell** | dynamic island + control center (Python/GTK3, layer-shell) | `nothing-shell/` |
-| **Waybar** (×2) | the top bar · desktop widgets | `waybar/` |
+| **Theme** | colours per mode + shared typography | `hypr/themes/mac-dark/`, `mac-light/` (active: `hypr/theme`, switched by `nothing-theme`) |
+| **nothing-shell** | island, Control Center, desktop widgets (Python/GTK3, layer-shell) | `nothing-shell/` |
+| **Waybar** | the menu bar | `waybar/` |
 | **SwayNC** | notification *popups* and Do-Not-Disturb | `swaync/` |
 | **Settings** | settings app + `nothing-settings` CLI (Python/GTK3) | `settings/` → `~/.config/nothing/` |
 | **Rofi** | app launcher, power menu, clipboard, cheat-sheet | `rofi/` |
@@ -167,19 +168,38 @@ NVIDIA: remove the `LIBVA_DRIVER_NAME` line and follow the Hyprland wiki's NVIDI
 
 ## 3. Daily use
 
-### The top bar
+### The menu bar
 
-One continuous frosted bar. **Left:** the launcher (right-click → Settings). **Centre:** the
-island (below). **Right:** a chevron that slides out the tray, CPU and memory on hover ·
-download / upload speed · Wi-Fi (click → Settings → Network, right-click → connection
-editor) · clipboard history · battery (laptops) · notifications · quick settings (opens the
-control center) · power (right-click → lock).
+One continuous frosted bar, like macOS. **Left:** the  — the Apple menu (About This
+Computer, System Settings…, Force Quit Window, Sleep, Restart…, Shut Down…, Lock Screen,
+Log Out…; right-click → app launcher) · the focused app's name in bold · its window title.
+**Centre:** the workspace dots (the island, below). **Right:** a chevron that slides out the
+tray, CPU and memory on hover · download / upload speed · Bluetooth (click → Settings,
+right-click → Blueman) · Wi-Fi (click → Settings → Network, right-click → connection editor)
+· battery (laptops) · clipboard history · Control Center (right-click → Light/Dark) · date
+and time — click for Control Center and notifications, right-click for Do Not Disturb.
+
+### Light & Dark mode — `Super` `Shift` `T`
+
+Also: the **Dark Mode** tile in Control Center, **Settings → Appearance**, or
+`nothing-theme toggle | light | dark | status`. It repoints `~/.config/hypr/theme` to
+`themes/mac-light` or `themes/mac-dark` and reloads everything in place: Hyprland borders,
+shadows and blur, the menu bar, Control Center, island and widgets, notifications, the dock,
+kitty, GTK apps (`color-scheme` + Breeze/Adwaita variant), the wallpaper (unless you picked one
+in Settings) and — at the next lock — hyprlock.
+
+### Desktop widgets
+
+Drawn by nothing-shell on the wallpaper (under windows): **Weather** (sky gradient for the
+current condition and time of day, H/L), **Clock** (analog, orange second hand),
+**Calendar** (weekday in red, month grid) and **System** (CPU / memory / disk as activity
+rings, CPU/GPU/SSD temperatures).
 
 ### The dynamic island (top centre)
 
-*Idle:* it is the bar's centre — workspace dots (the sage pill is the active one), weather,
-clock. A tiny animated **dot equaliser** appears while media plays; a **breathing clay dot**
-while recording the screen; a sage speaker if audio is muted.
+*Idle:* it is the bar's centre — workspace dots (the stretched pill is the active one). A
+tiny animated **equaliser** appears while media plays; a **pulsing red dot** while recording
+the screen; a speaker if audio is muted; a moon while Night Shift is on.
 
 | Do | Result |
 |---|---|
@@ -197,12 +217,13 @@ settings) · Wi-Fi and Bluetooth toggles.
 
 It hides itself while a window is fullscreen on the main screen.
 
-### Control center (quick settings) — `Super` `N` (or click the sliders, CPU / RAM or 🔔 in the bar)
+### Control Center — `Super` `N` (or click the sliders icon or the clock in the menu bar)
 
-Live CPU history as a dot matrix (newest column in the accent colour), RAM, CPU/GPU/SSD
-temperatures (tile warms to clay when hot), toggles for **Wi-Fi · Bluetooth · Silent (DND) ·
-Mic**, notification history (✕ to dismiss, **Clear** for all) and power buttons. **Log Out /
-Restart / Shut Down ask twice** — the button turns clay and says *Confirm?* for 2.6 s.
+Laid out like macOS: **Wi-Fi · Bluetooth · Microphone** (blue circles when on, with the
+network name), **Focus** (Do Not Disturb), **Night Shift**, **Dark Mode**, a **Sound** slider,
+a live CPU graph, memory bar and CPU/GPU/SSD temperatures (orange when hot), notification
+history (✕ to dismiss, **Clear** for all) and power buttons. **Log Out / Restart / Shut Down
+ask twice** — the button turns red and says *Confirm?* for 2.6 s.
 Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
 ### Power menu — `Super` `Shift` `X` (or click ⏻)
@@ -271,7 +292,7 @@ island while it is on.
 
 | Where | How |
 |---|---|
-| keys | `Super` `Ctrl` `N` toggles |
+| keys | `Super` `Ctrl` `N` toggles (Light/Dark: `Super` `Shift` `T`) |
 | control center | **NIGHT** tile |
 | Settings | **Night mode** page: on/off · warmth · schedule with exact times |
 | terminal | `nothing-night on\|off\|toggle`, `nothing-night temp 3500`, `nothing-night schedule 21:30 06:45`, `nothing-night schedule off`, `nothing-night status` |
@@ -302,8 +323,7 @@ The lock screen shows the current keyboard layout — type your password with th
 
 ### Notifications
 
-Popups appear top-right (SwayNC). History lives in the control center. The bell gets a sage
-dot when there is history; `Super` `Shift` `N` (or right-click the bell) toggles DND.
+Popups appear top-right (SwayNC). History lives in the control center. History is in the Control Center; `Super` `Shift` `N` (or right-click the bell) toggles DND.
 
 ### Screenshots, recording, clipboard
 
@@ -403,6 +423,8 @@ dot, `-RTMIN+9` the notification bell.
 | `$XDG_RUNTIME_DIR/nothing-rotate/` | auto-rotation state (convertibles) |
 | `hypr/hyprland.local.lua`, `waybar/local.jsonc` | your machine files — inside the repo folder, git-ignored |
 | `~/.config/fontconfig/` | symlink to `fontconfig/` — SF Pro → Inter, SF Mono → JetBrains Mono fallbacks |
+| `~/.local/share/fonts/SF-Pro/` | Apple's SF fonts, unpacked by `scripts/install-sf-fonts.sh` |
+| `hypr/theme` | the active mode (git-ignored link → `themes/mac-dark` or `themes/mac-light`) |
 | `~/.config-backup/<timestamp>/` | your configs from before the first install |
 
 ---
@@ -411,8 +433,9 @@ dot, `-RTMIN+9` the notification bell.
 
 | I want to change… | Edit |
 |---|---|
-| colours, fonts | the active theme, `hypr/theme/` → `palette.css` (all GTK: bar, island, quick settings, Settings app, dock, notifications), `palette.rasi`, `theme.lua`, `hyprlock.conf`, `kitty.conf`, `fonts.conf` |
-| the whole theme | `cp -r hypr/themes/copenhagen hypr/themes/mine`, edit, `ln -sfn themes/mine hypr/theme`, `make reload` |
+| colours | `hypr/themes/mac-dark/` and `mac-light/` (same names in both): `palette.css` (all GTK: menu bar, island, Control Center, widgets, Settings app, dock, notifications), `palette.rasi`, `theme.lua`, `hyprlock.conf`, `kitty.conf`, `wallpaper.jpg` |
+| fonts | `hypr/themes/typography.css` (GTK), `$font_*` in the hyprlock palettes, `font-*` in the rofi palettes, `hypr/themes/fonts.conf` (fallbacks) |
+| light / dark | `nothing-theme toggle` · `Super` `Shift` `T` · Control Center · Settings → Appearance |
 | gaps, borders, rounding, shadows, blur, animations | **Settings → Appearance** (defaults: `hypr/conf/look.lua`; borderless windows: `borderless = true` in `theme.lua`) |
 | keybindings, default apps | `hypr/conf/keybinds.lua` (+ `rofi/scripts/keybinds.sh` cheat-sheet + README) |
 | autostart, environment | `hypr/conf/autostart.lua` |
@@ -433,13 +456,16 @@ dot, `-RTMIN+9` the notification bell.
 `~/.config/hypr/hyprland.local.lua` (its `setup()` runs last and can override anything) and
 `~/.config/waybar/local.jsonc`. Both are git-ignored; see §2 *Your machine*.
 
-**Fonts.** SF Pro Text for UI, SF Pro Display for large numerals, SF Mono for code. They're
-Apple's and not bundled (AUR `apple-fonts` if you want them); `fontconfig/fonts.conf` includes
-the theme's `fonts.conf`, which maps them to Inter / Inter Display / JetBrains Mono for every
-app — check with `fc-match "SF Pro Text"`. **Pango font strings** (hyprlock, rofi) take a
+**Fonts.** SF Pro Text for UI, SF Pro Display for titles and large numerals, SF Pro Rounded
+for widget figures and the lock-screen clock, SF Mono for code. They're Apple's and not
+bundled: download `SF-Pro.dmg` (and `SF-Mono.dmg`) from
+[developer.apple.com/fonts](https://developer.apple.com/fonts/) into `~/Downloads`, then
+`sudo pacman -S 7zip && scripts/install-sf-fonts.sh` (the installer does this too).
+Without them `hypr/themes/fonts.conf` maps them to Inter / Inter Display / JetBrains Mono for
+every app — check with `fc-match "SF Pro Text"`. **Pango font strings** (hyprlock, rofi) take a
 comma-separated family list; end it with a comma (`SF Pro Display, Inter,`) so a family name
 ending in a number isn't read as the size. GTK CSS can't hold font variables, so the font
-families for GTK live in the typography block of `palette.css`.
+families for GTK live in `hypr/themes/typography.css`.
 
 ---
 
@@ -532,7 +558,8 @@ Packages are left installed; remove them with `sudo pacman -Rns …` if you want
 | Weather shows `--` | offline or wttr.in down; `~/.config/waybar/scripts/weather.py bar` to test |
 | No album art | the player doesn't publish `mpris:artUrl` (common for browser tabs) — a dot placeholder is shown |
 | Icons show as □ | Nerd fonts missing: `sudo pacman -S ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols` |
-| Text isn't Inter / SF Pro | `fc-match "SF Pro Text"` should say Inter (or SF Pro); if not, `make links` (links `~/.config/fontconfig`) and `fc-cache -f` |
+| Text isn't SF Pro | `fc-list \| grep "SF Pro"` — empty → `scripts/install-sf-fonts.sh` (needs `7zip` and `~/Downloads/SF-Pro.dmg`); `fc-match "SF Pro Text"` must not say DejaVu → `make links`, `fc-cache -f` |
+| Glass looks flat / no blur | `hyprctl layers` shows the namespaces; each needs a `glass-…` layer rule in `hypr/conf/rules.lua`. Blur only shows over something colourful — try the default wallpaper |
 | A rofi menu shows raw CSS as text | a `.rasi` line with two quoted strings — keep one quoted value per line |
 | `hyprctl dispatch exit` → “')' expected near …” | 0.56 syntax: `hyprctl dispatch 'hl.dsp.exit()'` |
 

@@ -32,9 +32,10 @@ Scopes in use: `hypr`, `hyprlock`, `hypridle`, `island`, `control`, `waybar`, `s
   the GTK main loop — slow work goes through `in_thread()`.
 - **Hyprland**: Lua config; dispatchers are `hl.dsp.*` expressions. Validate with
   `Hyprland --verify-config -c hypr/hyprland.lua` (also loads `hypr/conf/*.lua`).
-- **Design** (Copenhagen): warm neutrals, no red and no pure white. Colours and fonts come
-  only from the theme (`hypr/themes/<name>/`) — never hard-code a hex value in a component.
-  Sage = on / active, sand = warning, clay = live / critical / destructive.
-  SF Pro Text for UI, SF Pro Display for large numerals, SF Mono for code.
+- **Design** (macOS): frosted glass + Apple system colours, in a light and a dark variant.
+  Colours come only from the theme (`hypr/themes/mac-dark|mac-light/`, same names in both) —
+  never hard-code a hex value in a component. Blue = on / active / selection, orange =
+  warning, red = recording / destructive. SF Pro Text for UI, SF Pro Display for titles and
+  large numerals, SF Pro Rounded for widget figures, SF Mono for code (`hypr/themes/typography.css`).
 - No secrets, personal paths or machine-specific values in commits — use env vars or
   `*.local.*` files (git-ignored).
