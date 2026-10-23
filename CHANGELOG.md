@@ -42,6 +42,9 @@ project uses [Semantic Versioning](https://semver.org/).
   wallpapers. `hyprland.lua` is a loader for `hypr/conf/{monitors,autostart,input,look,rules,keybinds}.lua`.
 
 ### Added
+- **Finder-style Dolphin**: macOS Dark / Light KDE colour schemes with Apple-blue accent,
+  SF Pro, Papirus icons, double-click, no menu bar — switched live by `nothing-theme`
+  (`QT_QPA_PLATFORMTHEME=kde` so Qt apps follow kdeglobals).
 - **Customisable desktop widgets**: drag anywhere, click actions, small / medium sizes, analog
   / digital clock, add / remove (right-click, Edit Widgets mode with badges, Settings →
   Appearance, `nothing-shell widgets …`), layout saved per machine in

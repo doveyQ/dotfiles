@@ -226,6 +226,8 @@ for name in "${!BINS[@]}"; do
   run chmod +x "$REPO/${BINS[$name]}"
   place "$REPO/${BINS[$name]}" "$BIN/$name"
 done
+# KDE colour schemes (macOS light / dark) for Dolphin and other Qt apps
+for f in "$REPO"/kde/color-schemes/*.colors; do place "$f" "$HOME/.local/share/color-schemes/$(basename "$f")"; done
 # private data stays owner-only: settings (Hyprland executes settings.lua), clipboard
 # history, notification history, widget layout, weather location
 for d in "$CONFIG/nothing" "$HOME/.cache/nothing-shell" "$HOME/.cache/cliphist"; do

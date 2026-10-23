@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Light / Dark mode.  Installed as `nothing-theme`; Super+Shift+T, the Control Center tile
-# and Settings → Appearance call it.
+# and Settings → Appearance call it. Also themes KDE / Qt apps (Dolphin) like Finder.
 #
 #   nothing-theme [toggle|dark|light|status]
 #
@@ -32,6 +32,42 @@ if command -v gsettings >/dev/null; then
     Adwaita|Adwaita-dark) gsettings set org.gnome.desktop.interface gtk-theme "$([[ $mode == dark ]] && echo Adwaita-dark || echo Adwaita)" ;;
   esac
 fi
+
+# KDE / Qt apps — Dolphin as Finder: colour scheme (kde/color-schemes), Papirus icons (blue
+# folders), SF Pro, double-click to open, no menu bar, small sidebar icons. Running KDE apps
+# are told to re-read colours and icons.
+apply_kde() {
+  command -v kwriteconfig6 >/dev/null || return 0
+  local scheme=MacDark icons=Papirus-Dark accent="#0A84FF" k=kwriteconfig6
+  [[ $mode == light ]] && { scheme=MacLight; icons=Papirus-Light; accent="#007AFF"; }
+  local ui="SF Pro Text,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+  $k --file kdeglobals --group General --key font "$ui"
+  $k --file kdeglobals --group General --key menuFont "$ui"
+  $k --file kdeglobals --group General --key toolBarFont "$ui"
+  $k --file kdeglobals --group General --key smallestReadableFont "SF Pro Text,8,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+  $k --file kdeglobals --group General --key fixed "SF Mono,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+  $k --file kdeglobals --group KDE --key widgetStyle Breeze
+  $k --file kdeglobals --group KDE --key SingleClick false
+  $k --file kdeglobals --group Icons --key Theme "$icons"
+  $k --file dolphinrc --group MainWindow --key MenuBar Disabled
+  $k --file dolphinrc --group General --key ShowZoomSlider false
+  $k --file dolphinrc --group General --key ShowSelectionToggle false
+  $k --file dolphinrc --group PlacesPanel --key IconSize 16
+  # scheme first, then an explicit accent on top: with --accent-color the tool applies only
+  # the accent, and without one a previous scheme's accent (selection, focus, links) is kept
+  if command -v plasma-apply-colorscheme >/dev/null; then
+    plasma-apply-colorscheme "$scheme" >/dev/null 2>&1
+    plasma-apply-colorscheme --accent-color "$accent" >/dev/null 2>&1
+  fi
+  # tell running KDE apps: palette changed (the accent pass alone isn't announced), icons changed
+  if command -v dbus-send >/dev/null; then
+    dbus-send --session --type=signal /KGlobalSettings org.kde.KGlobalSettings.notifyChange \
+      int32:0 int32:0 >/dev/null 2>&1
+    dbus-send --session --type=signal /KIconLoader org.kde.KIconLoader.iconChanged int32:0 >/dev/null 2>&1
+  fi
+  return 0
+}
+apply_kde
 
 [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]] || { echo "$mode (applies at next login)"; exit 0; }
 

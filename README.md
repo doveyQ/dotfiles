@@ -41,7 +41,9 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
   clipboard · Control Center · date. It never shows which app, page or video is focused.
 - **Light & Dark mode** — `Super` `Shift` `T`, the Control Center tile, Settings → Appearance or
   `nothing-theme toggle`: menu bar, Control Center, widgets, notifications, launcher, dock,
-  Settings, kitty, GTK apps, lock screen and wallpaper switch live.
+  Settings, kitty, GTK apps, Dolphin and other KDE/Qt apps, lock screen and wallpaper switch live.
+- **Finder-style Dolphin** — macOS Dark / Light colour schemes (`kde/color-schemes`), Apple-blue
+  selection, SF Pro, blue folders (Papirus), double-click to open, no menu bar.
 - **Desktop widgets** — Weather, Clock, Calendar and System, each small or medium. Drag them
   anywhere, click them (forecast, analog ↔ digital, calendar, Control Center), right-click for
   size / style / remove / add, or *Edit Widgets* for macOS-style remove badges and **Add

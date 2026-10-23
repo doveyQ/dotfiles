@@ -51,6 +51,7 @@ hairline window edges with deep soft shadows — in a **Light** and a **Dark** m
 | **hyprpaper** | wallpaper | `hypr/hyprpaper.conf` |
 | **nwg-dock** | auto-hiding dock on the main screen | `nwg-dock-hyprland/` |
 | **kitty** | terminal | `kitty/kitty.conf` |
+| **Dolphin** | files, styled like Finder | `kde/color-schemes/` (applied by `nothing-theme`) |
 
 **Monitors.** Out of the box every screen runs at its preferred mode and the island, bar and
 dock use the primary one. Your own layout (which screen is *main*, positions, refresh rates,
@@ -186,8 +187,15 @@ Also: the **Dark Mode** tile in Control Center, **Settings → Appearance**, or
 `nothing-theme toggle | light | dark | status`. It repoints `~/.config/hypr/theme` to
 `themes/mac-light` or `themes/mac-dark` and reloads everything in place: Hyprland borders,
 shadows and blur, the menu bar, Control Center, island and widgets, notifications, the dock,
-kitty, GTK apps (`color-scheme` + Breeze/Adwaita variant), the wallpaper (unless you picked one
-in Settings) and — at the next lock — hyprlock.
+kitty, GTK apps (`color-scheme` + Breeze/Adwaita variant), KDE/Qt apps such as Dolphin, the
+wallpaper (unless you picked one in Settings) and — at the next lock — hyprlock.
+
+**Dolphin (Files) like Finder.** Qt apps use KDE's platform theme (`QT_QPA_PLATFORMTHEME=kde`),
+so they follow `~/.config/kdeglobals`. On every switch `nothing-theme` applies the macOS Dark /
+Light colour scheme from `kde/color-schemes/` (linked to `~/.local/share/color-schemes/`) with
+Apple's blue as accent, Papirus-Dark / -Light icons (blue folders), SF Pro / SF Mono, Breeze,
+double-click to open, and in Dolphin: no menu bar, small sidebar icons, no zoom slider. Open KDE
+apps update in place. Dolphin has no title bar under Hyprland, so there are no traffic lights.
 
 ### Desktop widgets
 
