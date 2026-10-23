@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ┏┓╻┏━┓╺┳╸╻ ╻╻┏┓╻┏━╸  dotfiles installer — Copenhagen Hyprland desktop
+# ┏┓╻┏━┓╺┳╸╻ ╻╻┏┓╻┏━╸  dotfiles installer — macOS-style Hyprland desktop
 # ┃┗┫┃ ┃ ┃ ┣━┫┃┃┗┫┃╺┓  Idempotent: safe to run again after `git pull`.
 # ╹ ╹┗━┛ ╹ ╹ ╹╹╹ ╹┗━┛
 #
@@ -30,6 +30,8 @@ declare -A BINS=(
   [nothing-keybinds]="rofi/scripts/keybinds.sh"
   [nothing-reload]="hypr/scripts/nothing-reload.sh"
   [nothing-night]="hypr/scripts/nothing-night.py"
+  [nothing-theme]="hypr/scripts/toggle-theme.sh"
+  [nothing-applemenu]="rofi/scripts/applemenu.sh"
 )
 
 DO_PACKAGES=1 DO_SYSTEM=1 DO_FONTS=1 MODE=link DRY=0 YES=0 BOOT_LOCK=ask RESTORE_LOGIN=0
@@ -179,13 +181,16 @@ fi
 # ── 3. fonts ─────────────────────────────────────────
 if ((DO_FONTS)); then
   step "Fonts"
-  # Apple's SF Pro / SF Mono can't be redistributed; without them the theme's fontconfig
-  # file (hypr/themes/<name>/fonts.conf) maps them to Inter and JetBrains Mono.
+  # Apple's SF fonts can't be redistributed: download SF-Pro.dmg (and SF-Mono.dmg) from
+  # https://developer.apple.com/fonts/ into ~/Downloads; they're unpacked from there.
+  # Without them hypr/themes/fonts.conf maps SF Pro → Inter and SF Mono → JetBrains Mono.
   if fc-list : family | grep -x "SF Pro Text" >/dev/null; then   # (no -q: SIGPIPE + pipefail)
     info "SF Pro found"
+  elif compgen -G "$HOME/Downloads/SF-*.dmg" >/dev/null && command -v 7z >/dev/null; then
+    run "$REPO/scripts/install-sf-fonts.sh"
   else
     info "SF Pro not installed — falling back to Inter / JetBrains Mono"
-    info "(optional: the AUR package 'apple-fonts'; Apple's font licence applies)"
+    info "(put SF-Pro.dmg from developer.apple.com/fonts in ~/Downloads and rerun)"
   fi
   run fc-cache -f
 fi
@@ -214,6 +219,8 @@ place() {           # place <repo-path> <target>
   info "linked  ${dst/#$HOME/\~}"
 }
 
+# the active theme (git-ignored link, switched later by `nothing-theme`): dark by default
+[[ -L "$REPO/hypr/theme" ]] || { run ln -s themes/mac-dark "$REPO/hypr/theme"; info "theme   mac-dark (Super+Shift+T toggles light / dark)"; }
 for d in "${CONFIG_DIRS[@]}"; do place "$REPO/$d" "$CONFIG/$d"; done
 for name in "${!BINS[@]}"; do
   run chmod +x "$REPO/${BINS[$name]}"
@@ -232,7 +239,7 @@ for f in "$REPO"/applications/*.desktop; do
     info "wrote   ${dst/#$HOME/\~}"
   fi
 done
-run chmod +x "$REPO"/hypr/scripts/*.sh "$REPO"/hypr/scripts/*.py "$REPO"/waybar/scripts/*.sh "$REPO"/waybar/scripts/*.py "$REPO"/rofi/scripts/*.sh "$REPO"/system/*.sh "$REPO"/settings/*.py
+run chmod +x "$REPO"/hypr/scripts/*.sh "$REPO"/hypr/scripts/*.py "$REPO"/waybar/scripts/*.py "$REPO"/scripts/*.sh "$REPO"/rofi/scripts/*.sh "$REPO"/system/*.sh "$REPO"/settings/*.py
 command -v update-desktop-database >/dev/null && run update-desktop-database -q "$APPS" || true
 
 # ── 5. verify ─────────────────────────────────────────
@@ -245,7 +252,7 @@ if command -v Hyprland >/dev/null; then
   fi
 fi
 python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$REPO/nothing-shell/nothing-shell.py" && info "nothing-shell: parses"
-for s in "$REPO"/hypr/scripts/*.sh "$REPO"/rofi/scripts/*.sh "$REPO"/waybar/scripts/*.sh; do
+for s in "$REPO"/hypr/scripts/*.sh "$REPO"/rofi/scripts/*.sh "$REPO"/scripts/*.sh; do
   bash -n "$s" || warn "syntax error in $s"
 done
 info "scripts: syntax ok"

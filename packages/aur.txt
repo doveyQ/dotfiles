@@ -1,6 +1,6 @@
 # AUR packages (installed with yay). Nothing here is required.
-# Apple fonts for the Copenhagen theme (else Inter / JetBrains Mono are used):
-# apple-fonts
+# Apple's SF fonts: install them from the official .dmg instead (scripts/install-sf-fonts.sh);
+# without them Inter / JetBrains Mono are used.
 # Uncomment to add extras:
 # wlogout
 # hyprshot

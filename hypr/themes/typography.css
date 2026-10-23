@@ -1,0 +1,21 @@
+/* ── Typography — shared by every theme ───────────────────────────────────────
+   SF Pro Text for UI, SF Pro Display for large numerals and titles, SF Pro Rounded
+   for widget figures, SF Mono for code. Installed by scripts/install-sf-fonts.sh;
+   hypr/themes/fonts.conf falls back to Inter / JetBrains Mono when they're missing.
+   (GTK3 CSS has no font variables, so the families live here, once.)          */
+* {
+  font-family: "SF Pro Text", "Inter", "Cantarell", "Symbols Nerd Font", sans-serif;
+}
+.display, .p-clock, .cc-title, .brand, .page-title, .temp-val, .vol-pct, #custom-clock {
+  font-family: "SF Pro Display", "Inter Display", "Inter", sans-serif;
+}
+.rounded, .w-temp, .stat-val {
+  font-family: "SF Pro Rounded", "SF Pro Display", "Inter Display", sans-serif;
+}
+.mono, .kbd, .dots {
+  font-family: "SF Mono", "JetBrains Mono", "JetBrainsMono Nerd Font", monospace;
+}
+.glyph, .nav-icon, .w-icon, .w-day-icon, .c-night,
+#custom-apple, #custom-more, #bluetooth, #custom-clipboard, #custom-quick {
+  font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font", sans-serif;
+}

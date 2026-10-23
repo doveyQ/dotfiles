@@ -49,4 +49,5 @@ curl
 ttf-jetbrains-mono-nerd
 ttf-nerd-fonts-symbols
 inter-font
+7zip                     # unpacks Apple's SF font .dmg (scripts/install-sf-fonts.sh)
 papirus-icon-theme

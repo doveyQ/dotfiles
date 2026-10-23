@@ -1,0 +1,43 @@
+/* ── macOS Dark — GTK palette ────────────────────────────────────────────────
+   Every GTK surface imports this through ~/.config/hypr/theme/palette.css:
+   Waybar, nothing-shell (island, Control Center, desktop widgets), the Settings
+   app, the dock and SwayNC. mac-light/palette.css defines the same names.
+   Switch with `nothing-theme toggle` (Super+Shift+T).                           */
+
+/* glass — translucent; Hyprland blurs and adds vibrancy behind it */
+@define-color glass      rgba(30, 30, 32, 0.55);   /* menu bar, dock, widgets */
+@define-color glass_hi   rgba(36, 36, 38, 0.72);   /* Control Center, island panel, popups */
+@define-color card       rgba(255, 255, 255, 0.08); /* modules inside a glass panel */
+@define-color card2      rgba(255, 255, 255, 0.14); /* idle buttons / circles */
+@define-color hover      rgba(255, 255, 255, 0.10);
+@define-color press      rgba(255, 255, 255, 0.18);
+@define-color line       rgba(255, 255, 255, 0.12); /* outer hairline */
+@define-color highlight  rgba(255, 255, 255, 0.10); /* inner top-edge highlight */
+@define-color track      rgba(255, 255, 255, 0.16);
+@define-color shadow     rgba(0, 0, 0, 0.35);
+
+/* solid surfaces (windows) */
+@define-color base       #1e1e1e;
+@define-color window_bg  rgba(30, 30, 30, 0.86);
+@define-color sidebar    rgba(44, 44, 46, 0.50);
+
+/* text */
+@define-color fg         #f5f5f7;
+@define-color dim        #a1a1a6;
+@define-color mute       #636366;
+@define-color on_accent  #ffffff;
+
+/* Apple system colours (dark-mode variants) */
+@define-color blue       #0a84ff;
+@define-color green      #30d158;
+@define-color orange     #ff9f0a;
+@define-color red        #ff453a;
+@define-color indigo     #5e5ce6;
+@define-color yellow     #ffd60a;
+@define-color pink       #ff375f;
+@define-color teal       #64d2ff;
+@define-color purple     #bf5af2;
+
+@define-color accent     @blue;
+@define-color warn       @orange;
+@define-color alert      @red;

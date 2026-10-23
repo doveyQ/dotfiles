@@ -1,0 +1,19 @@
+/* macOS Light — rofi palette (imported by ~/.config/rofi/*.rasi) */
+* {
+  glass:     #f6f6f8d1;
+  scrim:     #00000033;
+  card:      #0000000a;
+  card2:     #00000014;
+  line:      #00000014;
+  fg:        #1d1d1f;
+  dim:       #6e6e73;
+  mute:      #aeaeb2;
+  on-accent: #ffffff;
+  accent:    #007aff;
+  alert:     #ff3b30;
+
+  font-ui:      "SF Pro Text,Inter,Cantarell 12";
+  font-ui-sm:   "SF Pro Text,Inter,Cantarell 10";
+  font-display: "SF Pro Display,Inter Display,Inter 22";
+  font-search:  "SF Pro Display,Inter Display,Inter 19";
+}
