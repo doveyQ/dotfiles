@@ -1,0 +1,64 @@
+/* macOS look for GTK 4 / libadwaita apps — imported by ~/.config/gtk-4.0/gtk.css
+   (nothing-theme adds the import next to KDE's colors.css, which carries the light / dark
+   palette). Traffic-light window controls everywhere; Nautilus gets Finder's translucent
+   sidebar (Hyprland blurs what shows through). Button order: close,minimize,maximize:     */
+
+/* ── traffic lights ──
+   The circle is drawn on the fixed-size icon (as libadwaita does), not on the button, which
+   stretches to the header bar's height.                                                    */
+windowcontrols {
+  margin: 0 4px;
+  border-spacing: 8px;
+}
+windowcontrols > button,
+windowcontrols > button:hover,
+windowcontrols > button:active {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+windowcontrols > button > image {
+  min-width: 12px;
+  min-height: 12px;
+  padding: 1px;
+  -gtk-icon-size: 10px;
+  border-radius: 9999px;
+  color: transparent;               /* glyph only on hover, like macOS */
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.22);
+}
+windowcontrols > button.close > image    { background-color: #ff5f56; }
+windowcontrols > button.minimize > image { background-color: #ffbd2e; }
+windowcontrols > button.maximize > image { background-color: #27c93f; }
+windowcontrols:hover > button > image { color: rgba(0, 0, 0, 0.55); }
+windowcontrols > button:active > image { box-shadow: inset 0 0 0 9px rgba(0, 0, 0, 0.18); }
+
+/* unfocused windows: grey dots */
+window:backdrop windowcontrols > button > image { background-color: rgba(128, 128, 128, 0.35); }
+
+/* ── Finder: translucent, blurred sidebar; opaque file view ── */
+window.nautilus-window,
+window.nautilus-window.background {
+  background-color: transparent;
+}
+window.nautilus-window .sidebar-pane,
+window.nautilus-window .sidebar-pane .navigation-sidebar {
+  background-color: color-mix(in srgb, var(--sidebar-bg-color) 62%, transparent);
+}
+window.nautilus-window .content-pane {
+  background-color: var(--view-bg-color);
+}
+window.nautilus-window .navigation-sidebar > row {
+  min-height: 28px;
+  border-radius: 6px;
+  margin: 0 8px;
+}
+window.nautilus-window .navigation-sidebar > row:selected {
+  background-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+/* tighter, Finder-like grid and rows */
+window.nautilus-window gridview > child { padding: 6px; border-radius: 8px; }
+window.nautilus-window columnview > listview > row { min-height: 26px; }

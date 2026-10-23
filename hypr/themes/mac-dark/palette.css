@@ -15,6 +15,7 @@
 @define-color highlight  rgba(255, 255, 255, 0.10); /* inner top-edge highlight */
 @define-color track      rgba(255, 255, 255, 0.16);
 @define-color shadow     rgba(0, 0, 0, 0.35);
+@define-color notif_bg   rgba(32, 32, 32, 0.92);  /* banners: SwayNC (GTK4) gets no compositor blur, so near-opaque */
 
 /* solid surfaces (windows) */
 @define-color base       #1e1e1e;

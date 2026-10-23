@@ -32,6 +32,7 @@ declare -A BINS=(
   [nothing-night]="hypr/scripts/nothing-night.py"
   [nothing-theme]="hypr/scripts/toggle-theme.sh"
   [nothing-applemenu]="rofi/scripts/applemenu.sh"
+  [nothing-files]="hypr/scripts/files.sh"
 )
 
 DO_PACKAGES=1 DO_SYSTEM=1 DO_FONTS=1 MODE=link DRY=0 YES=0 BOOT_LOCK=ask RESTORE_LOGIN=0
@@ -219,8 +220,6 @@ place() {           # place <repo-path> <target>
   info "linked  ${dst/#$HOME/\~}"
 }
 
-# the active theme (git-ignored link, switched later by `nothing-theme`): dark by default
-[[ -L "$REPO/hypr/theme" ]] || { run ln -s themes/mac-dark "$REPO/hypr/theme"; info "theme   mac-dark (Super+Shift+T toggles light / dark)"; }
 for d in "${CONFIG_DIRS[@]}"; do place "$REPO/$d" "$CONFIG/$d"; done
 for name in "${!BINS[@]}"; do
   run chmod +x "$REPO/${BINS[$name]}"
@@ -228,6 +227,11 @@ for name in "${!BINS[@]}"; do
 done
 # KDE colour schemes (macOS light / dark) for Dolphin and other Qt apps
 for f in "$REPO"/kde/color-schemes/*.colors; do place "$f" "$HOME/.local/share/color-schemes/$(basename "$f")"; done
+# generate the active theme (~/.config/hypr/theme/, git-ignored) from the saved choices —
+# dark + blue on a fresh install; Super+Shift+T / Settings → Appearance change it later
+if ((DRY)); then info "theme   would run nothing-theme apply"; else
+  "$REPO/hypr/scripts/toggle-theme.sh" apply >/dev/null 2>&1 && info "theme   $("$REPO/hypr/scripts/toggle-theme.sh" status --all)"
+fi
 # private data stays owner-only: settings (Hyprland executes settings.lua), clipboard
 # history, notification history, widget layout, weather location
 for d in "$CONFIG/nothing" "$HOME/.cache/nothing-shell" "$HOME/.cache/cliphist"; do

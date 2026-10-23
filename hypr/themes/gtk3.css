@@ -1,0 +1,46 @@
+/* macOS window controls for GTK 3 apps with header bars — imported by ~/.config/gtk-3.0/gtk.css
+   (nothing-theme adds the import next to KDE's colors.css). Button order comes from
+   gtk-decoration-layout = close,minimize,maximize: (also set by nothing-theme).
+   The circle is drawn on the fixed-size icon, not on the (stretching) button; user CSS
+   outranks the theme and KDE's window_decorations.css.                                       */
+
+headerbar button.titlebutton,
+headerbar button.titlebutton:hover,
+headerbar button.titlebutton:active,
+headerbar button.titlebutton:backdrop,
+.titlebar button.titlebutton,
+.titlebar button.titlebutton:hover,
+.titlebar button.titlebutton:active,
+.titlebar button.titlebutton:backdrop {
+  min-width: 0;
+  min-height: 0;
+  margin: 0 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  background-image: none;
+  box-shadow: none;
+  -gtk-icon-shadow: none;
+}
+headerbar button.titlebutton image,
+.titlebar button.titlebutton image {
+  min-width: 12px;
+  min-height: 12px;
+  padding: 1px;
+  border-radius: 9999px;
+  color: transparent;               /* glyph only on hover, like macOS */
+  -gtk-icon-transform: scale(0.7);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+headerbar button.titlebutton.close image,    .titlebar button.titlebutton.close image    { background-color: #ff5f56; }
+headerbar button.titlebutton.minimize image, .titlebar button.titlebutton.minimize image { background-color: #ffbd2e; }
+headerbar button.titlebutton.maximize image, .titlebar button.titlebutton.maximize image { background-color: #27c93f; }
+
+headerbar:hover button.titlebutton image,
+.titlebar:hover button.titlebutton image { color: rgba(0, 0, 0, 0.55); }
+headerbar button.titlebutton:active image,
+.titlebar button.titlebutton:active image { box-shadow: inset 0 0 0 9px rgba(0, 0, 0, 0.18); }
+
+/* unfocused windows: grey dots */
+headerbar:backdrop button.titlebutton image,
+.titlebar:backdrop button.titlebutton image { background-color: rgba(128, 128, 128, 0.35); }

@@ -16,6 +16,9 @@ return {
     blur_vibrancy_darkness = 0.0,
 
     background        = "rgba(f5f5f7ff)",
+    titlebar          = "rgba(ececeee6)",   -- hyprbars title bars (blurred)
+    titlebar_text     = "rgba(3c3c43ff)",
+    titlebar_button_inactive = "rgba(c7c7ccff)",
     groupbar_active   = "rgba(007affcc)",
     groupbar_inactive = "rgba(aeaeb288)",
 
