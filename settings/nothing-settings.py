@@ -156,15 +156,15 @@ SCHEMA = {
     "touchpad.natural_scroll":     ("input:touchpad:natural_scroll", bool, False),
     "touchpad.tap_to_click":       ("input:touchpad:tap_to_click", bool, True),
     "touchpad.disable_while_typing": ("input:touchpad:disable_while_typing", bool, True),
-    "appearance.gaps_in":          ("general:gaps_in", int, 8),
+    "appearance.gaps_in":          ("general:gaps_in", int, 6),
     "appearance.gaps_out":         ("general:gaps_out", int, 12),
     "appearance.border":           ("general:border_size", int, 1),
-    "appearance.rounding":         ("decoration:rounding", int, 18),
-    "appearance.inactive_opacity": ("decoration:inactive_opacity", float, 0.94),
+    "appearance.rounding":         ("decoration:rounding", int, 14),
+    "appearance.inactive_opacity": ("decoration:inactive_opacity", float, 0.96),
     "appearance.blur":             ("decoration:blur:enabled", bool, True),
-    "appearance.glow":             ("decoration:glow:enabled", bool, True),
+    "appearance.glow":             ("decoration:glow:enabled", bool, False),
     "appearance.animations":       ("animations:enabled", bool, True),
-    "appearance.wallpaper":        (None, str, os.path.join(HYPR, "wallpapers", "nothing-fluid.png")),
+    "appearance.wallpaper":        (None, str, os.path.join(HYPR, "wallpapers", "copenhagen.jpg")),
     "idle.lock":                   (None, int, 15),     # minutes idle, 0 = never
     "idle.screen_off":             (None, int, 0),      # 0 here = 30 s after locking (unless set)
     "idle.suspend":                (None, int, 60),
@@ -1415,7 +1415,7 @@ def gui(page):
                 self.row(w, title, None, slider(lo, hi, step, store().get(key), lambda v, k=key: self._set(k, v)))
             e = self.section("Effects")
             for key, title, sub in (("appearance.blur", "Blur", "Frosted glass behind bars, menus and see-through windows."),
-                                    ("appearance.glow", "Red glow", "Around the focused window."),
+                                    ("appearance.glow", "Soft glow", "A faint accent halo around the focused window."),
                                     ("appearance.animations", "Animations", None)):
                 self.row(e, title, sub, switch(store().get(key), lambda on, k=key: self._set(k, on)))
             self.row(e, "Reset appearance", "Back to the Nothing defaults.", button("Reset", self._reset, "danger"))

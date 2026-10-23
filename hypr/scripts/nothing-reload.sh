@@ -14,4 +14,4 @@ command -v nwg-dock-hyprland >/dev/null && nwg-dock-hyprland -d -i 36 -mb 10 ${N
 pkill -x hypridle; sleep 0.2; ~/.config/hypr/scripts/idle.sh >/dev/null 2>&1 &
 disown -a
 sleep 0.8
-notify-send -a Nothing "Desktop reloaded" "island · control center · bar · wallpaper"
+notify-send -a Desktop "Desktop reloaded" "island · control center · bar · wallpaper"
