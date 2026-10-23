@@ -59,6 +59,8 @@ return function(_)
     end
     hl.layer_rule({ name = "control-slide", match = { namespace = "^nothing-control$" }, animation = "slide right" })
     hl.layer_rule({ name = "rofi-fade",     match = { namespace = "^rofi$" },            animation = "fade" })
+    -- notification banners slide in from the right edge, like macOS
+    hl.layer_rule({ name = "notif-slide",   match = { namespace = "^swaync-notification-window$" }, animation = "slide right" })
     -- the island animates itself; a compositor slide would fight its morph
     hl.layer_rule({ name = "island-static", match = { namespace = "^nothing-island$" },   no_anim = true })
 end

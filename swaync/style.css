@@ -83,13 +83,56 @@
 .control-center .control-center-list .notification { background: transparent; box-shadow: none; }
 .widget-slider, .widget-volume { margin: 6px 4px; }
 
-/* popups: smoky glass cards with soft depth */
+/* ── banners: macOS floating notifications ──────────────────────────────
+   frosted glass (Hyprland blurs + slides the layer in), 16px squircle, app icon left,
+   bold title, readable body, round buttons. Below the menu bar, 8px from the edge.        */
+.floating-notifications.background .notification-row .notification-background {
+  margin: 8px 8px 0 0;
+  padding: 0;
+}
 .floating-notifications .notification-row .notification-background .notification {
-  background: @glass_hi;
+  background: @notif_bg;
   border: 1px solid @line;
   border-radius: 16px;
-  box-shadow: inset 0 1px 0 @highlight, 0 8px 32px @shadow;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 @highlight, 0 8px 28px @shadow;
 }
-.notification .app-name, .notification .summary { color: @fg; }
-.notification .body { color: @fg; }
-.notification .time { color: @dim; }
+.notification .notification-content { padding: 2px 0; }
+.notification .notification-content .image,
+.notification .notification-content .app-icon {
+  border-radius: 8px;
+  margin-right: 10px;
+  -gtk-icon-size: 36px;
+}
+.notification .app-name { color: @dim; font-size: 11px; font-weight: 500; }
+.notification .summary  { color: @fg; font-size: 13px; font-weight: 700; }
+.notification .body     { color: @fg; font-size: 13px; font-weight: 400; }
+.notification .time     { color: @dim; font-size: 11px; margin-right: 22px; }
+
+/* actions: rounded, quiet buttons */
+.notification .notification-action,
+.notification .notification-alt-actions button {
+  background: @card2;
+  border: 1px solid @line;
+  border-radius: 10px;
+  color: @fg;
+  margin: 6px 3px 0 3px;
+  padding: 4px 10px;
+}
+.notification .notification-action:hover { background: @press; }
+
+/* dismiss: small round button, shown on hover */
+.notification-row .close-button {
+  min-width: 20px;
+  min-height: 20px;
+  margin: 4px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid @line;
+  background: @glass_hi;
+  color: @dim;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.notification-row:hover .close-button { opacity: 1; }
+.notification-row .close-button:hover { background: @press; color: @fg; }
