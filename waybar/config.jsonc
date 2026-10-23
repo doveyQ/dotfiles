@@ -1,8 +1,9 @@
 // macOS-style menu bar — one continuous glass bar
-// Left:   Apple menu · app name · window title
-// Centre: workspace dots (the island, drawn by nothing-shell — hover it for media & calendar)
+// Left:   Tux — the system menu
+// Centre: workspace dots + time (the island, drawn by nothing-shell — hover it for media & calendar)
 // Right:  drawer (tray · CPU · memory) · net speed · Bluetooth · Wi-Fi · battery · clipboard
-//         · Control Center · date & time (click → Control Center / notifications)
+//         · Control Center · date (click → Control Center / notifications)
+// Privacy: the bar never shows which app, page or video is focused.
 {
   "layer": "top",
   "position": "top",
@@ -15,47 +16,15 @@
   "exclusive": true,
   "reload_style_on_change": true,
 
-  "modules-left":  ["custom/apple", "hyprland/window#app", "hyprland/window"],
+  "modules-left":  ["custom/logo"],
   "modules-right": ["group/system", "custom/clock"],
 
   // ────────────── LEFT ──────────────
-  "custom/apple": {
-    "format": "",
+  "custom/logo": {
+    "format": "",
     "tooltip": false,
     "on-click": "~/.local/bin/nothing-applemenu",
     "on-click-right": "rofi -show drun -theme ~/.config/rofi/nothing.rasi"
-  },
-
-  // bold app name, like the macOS menu bar
-  "hyprland/window#app": {
-    "format": "{class}",
-    "separate-outputs": true,
-    "rewrite": {
-      "^firefox$": "Firefox",
-      "^kitty$": "Terminal",
-      "^(code|Code|code-oss|code-url-handler)$": "Code",
-      "^(org\\.kde\\.dolphin|dolphin)$": "Files",
-      "^(dev\\.nothing\\.Settings|nothing-settings)$": "Settings",
-      "^nothing-float$": "Terminal",
-      "^(chromium|Chromium)$": "Chromium",
-      "^(google-chrome|Google-chrome)$": "Chrome",
-      "^jetbrains-idea.*$": "IntelliJ IDEA",
-      "^jetbrains-pycharm.*$": "PyCharm",
-      "^(org\\.pulseaudio\\.pavucontrol|pavucontrol)$": "Sound",
-      "^blueman-manager$": "Bluetooth",
-      "^nm-connection-editor$": "Network",
-      "^(Spotify|spotify)$": "Spotify",
-      "^(discord|vesktop)$": "Discord",
-      "^(steam|Steam)$": "Steam",
-      "^(mpv|vlc)$": "Media Player",
-      "^(?:[a-z0-9-]+\\.)+([A-Za-z0-9-]+)$": "$1"
-    }
-  },
-  "hyprland/window": {
-    "format": "{title}",
-    "max-length": 56,
-    "separate-outputs": true,
-    "tooltip": false
   },
 
   // ────────────── RIGHT ──────────────
@@ -166,11 +135,11 @@
     "on-click-right": "~/.local/bin/nothing-theme toggle"
   },
 
-  // "Fri 23 Oct   1:07 PM" — click: Control Center (notifications), right-click: Do Not Disturb
+  // "Fri 23 Oct" (the time is in the centre) — click: Control Center, right-click: Do Not Disturb
   "custom/clock": {
     "exec": "~/.config/waybar/scripts/clock.sh",
     "return-type": "json",
-    "interval": 5,
+    "interval": 60,
     "on-click": "~/.local/bin/nothing-shell control toggle",
     "on-click-right": "~/.local/bin/nothing-settings dnd"
   }

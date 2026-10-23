@@ -17,6 +17,7 @@ Usage:
   nothing-shell notif-status         JSON for the waybar bell
   nothing-shell notif-clear          clear notification history
   nothing-shell reload-css           re-read style.css and the theme palette (light / dark)
+  nothing-shell widgets list|types|add TYPE [small|medium]|remove ID|TYPE|edit|done|reset
   nothing-shell quit
 """
 import json
@@ -24,8 +25,10 @@ import math
 import os
 import re
 import socket
+import struct
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.parse
@@ -131,7 +134,10 @@ gi.require_version("Playerctl", "2.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, GtkLayerShell, Pango, PangoCairo, Playerctl  # noqa: E402
 
-os.makedirs(os.path.join(CACHE, "art"), exist_ok=True)
+os.makedirs(os.path.join(CACHE, "art"), mode=0o700, exist_ok=True)
+os.chmod(CACHE, 0o700)   # notification history may hold message text / codes: owner only
+if os.path.exists(NOTIF_FILE):
+    os.chmod(NOTIF_FILE, 0o600)
 
 
 # ───────────── helpers ─────────────
@@ -382,6 +388,12 @@ MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "
                "September", "October", "November", "December"]
 
 
+def clock_text(t=None):
+    """'1:07 PM' — English 12-hour regardless of LC_TIME (whose %p is empty in de_AT)."""
+    t = t or time.localtime()
+    return f"{t.tm_hour % 12 or 12}:{t.tm_min:02d} {'AM' if t.tm_hour < 12 else 'PM'}"
+
+
 def date_long(t=None):
     t = t or time.localtime()
     return f"{DAY_NAMES[t.tm_wday]}, {t.tm_mday} {MONTH_NAMES[t.tm_mon - 1]}"
@@ -568,7 +580,7 @@ class EqBars(Gtk.DrawingArea):
 
     def _draw(self, _w, cr):
         H = self.get_allocated_height()
-        set_rgba(cr, COL["accent"])
+        set_rgba(cr, COL["fg"], 0.85)
         for c in range(3):
             h = 3 + (H - 3) * (0.5 + 0.5 * math.sin(self.phase * (0.5 + c * 0.23) + c * 1.9))
             rounded_rect(cr, c * 5, H - h, 3, h, 1.5)
@@ -576,7 +588,7 @@ class EqBars(Gtk.DrawingArea):
 
 
 class RoundedArt(Gtk.DrawingArea):
-    """Album art with rounded corners; a colourful note placeholder when missing."""
+    """Album art with rounded corners; a quiet glass tile with a note when missing."""
 
     def __init__(self, size=92, radius=18):
         super().__init__()
@@ -599,13 +611,9 @@ class RoundedArt(Gtk.DrawingArea):
             Gdk.cairo_set_source_pixbuf(cr, self.pix, 0, 0)
             cr.paint()
             return
-        a, b = COL["pink"], COL["indigo"]
-        grad = cairo.LinearGradient(0, 0, s, s)
-        grad.add_color_stop_rgb(0, *a[:3])
-        grad.add_color_stop_rgb(1, *b[:3])
-        cr.set_source(grad)
+        set_rgba(cr, COL["fg"], 0.08)
         cr.paint()
-        draw_text(cr, "\U000f075a", f"Symbols Nerd Font {int(s * 0.3)}", s / 2, s * 0.28, (1, 1, 1, 0.92), "center")
+        draw_text(cr, "\U000f075a", f"Symbols Nerd Font {int(s * 0.3)}", s / 2, s * 0.28, COL["dim"], "center")
 
 
 # ───────────── layer-shell base ─────────────
@@ -666,7 +674,7 @@ class Island(LayerWindow):
         self.shell_box.set_halign(Gtk.Align.CENTER)
         self.ev.add(self.shell_box)
 
-        # ── compact row: workspace dots (+ recording / now-playing / night / muted) ──
+        # ── compact row: time + workspace dots (+ recording / now-playing / night / muted) ──
         self.compact = box(spacing=10, cls="island-compact")
         self.compact.set_halign(Gtk.Align.CENTER)
         self.rec = label("●", "rec-dot", xalign=0.5)
@@ -687,8 +695,8 @@ class Island(LayerWindow):
         self.c_vol = label("", "c-vol")
         self.c_night = label("󰖔", "c-night")
         self.c_night.set_tooltip_text("Night mode")
-        # (c_weather / c_clock stay unpacked: the menu bar shows the time on the right)
-        for w in (self.rec, self.eq, self.ws_box, self.c_night, self.c_vol):
+        # (c_weather stays unpacked — weather lives in the widget and the expanded panel)
+        for w in (self.rec, self.eq, self.c_clock, self.ws_box, self.c_night, self.c_vol):
             self.compact.pack_start(w, False, False, 0)
         self.shell_box.pack_start(self.compact, False, False, 0)
 
@@ -949,7 +957,7 @@ class Island(LayerWindow):
             set_cls(b, "urgent", i in urgent)
 
     def refresh_compact(self):
-        self.c_clock.set_text(time.strftime("%H:%M"))
+        self.c_clock.set_text(clock_text())
         w = weather()
         self.c_weather.set_text(f"{w['icon']}  {w['temp']}" if w else "󰖐  --")
         self.rec.set_visible(Sys.recording())
@@ -1226,10 +1234,7 @@ class NotifyLog:
                            "tooltip": f"{n} notification{'s' if n != 1 else ''}" + (" · DND" if dnd else "")})
 
     def _save(self):
-        tmp = NOTIF_FILE + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(self.items, f)
-        os.replace(tmp, NOTIF_FILE)
+        write_private(NOTIF_FILE, json.dumps(self.items))
         spawn("pkill -RTMIN+9 waybar")
         if self.shell.control:
             self.shell.control.render_notifs()
@@ -1559,33 +1564,91 @@ class Control(LayerWindow):
 
 
 # ═════════════════════════════ DESKTOP WIDGETS ═════════════════════════════
-# macOS-style widgets on the wallpaper (bottom layer, under windows): Weather and Clock
-# (small), Calendar and System (medium). Frosted glass from Hyprland's "glass-nothing-widgets"
-# layer rule; everything else is drawn here with cairo + Pango.
+# macOS-style widgets on the wallpaper: a full-screen surface on the bottom layer (under
+# windows) holding freely placed widgets. Drag to move, click for the widget's action,
+# right-click for size / style / remove / add, "Edit Widgets" for remove badges + Add.
+# The layout lives in ~/.config/nothing/widgets.json (validated on load; written 0600).
+WIDGETS_FILE = os.path.join(HOME, ".config", "nothing", "widgets.json")
 SMALL, GAP = 164, 12
 MEDIUM = 2 * SMALL + GAP
+SIZES = {"small": (SMALL, SMALL), "medium": (MEDIUM, SMALL)}
+MAX_WIDGETS = 24
+TOP, LEFT = 56, 18                      # below the menu bar
 FONT_UI, FONT_DISPLAY, FONT_ROUNDED = "SF Pro Text", "SF Pro Display", "SF Pro Rounded"
 GLYPHS = "Symbols Nerd Font"
 WHITE = (1, 1, 1, 1)
+DEFAULT_WIDGETS = [
+    {"id": "weather", "type": "weather", "size": "small", "x": LEFT, "y": TOP},
+    {"id": "clock", "type": "clock", "size": "small", "x": LEFT + SMALL + GAP, "y": TOP},
+    {"id": "calendar", "type": "calendar", "size": "medium", "x": LEFT, "y": TOP + SMALL + GAP},
+    {"id": "system", "type": "system", "size": "medium", "x": LEFT, "y": TOP + 2 * (SMALL + GAP)},
+]
+
+
+def write_private(path, text):
+    """Atomic write, readable by the owner only (0600 file in a 0700 directory)."""
+    d = os.path.dirname(path)
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=d, prefix=".tmp-")
+    try:
+        with os.fdopen(fd, "w") as f:
+            os.fchmod(f.fileno(), 0o600)
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
 
 
 class Widget(Gtk.DrawingArea):
     RADIUS = 22
+    KIND, NAME = "", ""
+    SIZES_OK = ("small", "medium")
+    OPTIONS = {}                          # option → allowed values (first = default)
 
-    def __init__(self, w, h):
+    def __init__(self, desk, spec):
         super().__init__()
-        self.set_size_request(w, h)
+        self.desk, self.spec = desk, spec
+        self.set_size_request(*SIZES[spec["size"]])
+        self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK |
+                        Gdk.EventMask.POINTER_MOTION_MASK | Gdk.EventMask.ENTER_NOTIFY_MASK |
+                        Gdk.EventMask.LEAVE_NOTIFY_MASK)
         self.connect("draw", self._draw)
+        self.connect("button-press-event", self._on_press)
+        self.connect("motion-notify-event", self._on_motion)
+        self.connect("button-release-event", self._on_release)
+        self.connect("enter-notify-event", lambda *_: self._hover(True))
+        self.connect("leave-notify-event", lambda *_: self._hover(False))
+        self.hover = False
+        self._press = None
+        self._drag = False
 
+    def opt(self, key):
+        return self.spec.get("options", {}).get(key, self.OPTIONS[key][0])
+
+    # ── drawing ──
     def _draw(self, _w, cr):
         W, H = self.get_allocated_width(), self.get_allocated_height()
         self.background(cr, W, H)
         self.paint(cr, W, H)
+        if self.desk.editing:              # macOS edit mode: remove badge
+            cr.arc(13, 13, 10, 0, 2 * math.pi)
+            set_rgba(cr, (0.55, 0.55, 0.58, 0.95))
+            cr.fill()
+            set_rgba(cr, WHITE)
+            cr.set_line_width(2)
+            cr.move_to(8.5, 13)
+            cr.line_to(17.5, 13)
+            cr.stroke()
 
     def background(self, cr, W, H):
         """Frosted glass card: translucent fill, hairline, light catching the top edge."""
         rounded_rect(cr, 0.5, 0.5, W - 1, H - 1, self.RADIUS)
-        set_rgba(cr, COL["glass"])
+        glass = COL["glass"]
+        set_rgba(cr, glass[:3] + (min(1, glass[3] + (0.08 if self.hover else 0)),))
         cr.fill_preserve()
         set_rgba(cr, COL["line"])
         cr.set_line_width(1)
@@ -1599,6 +1662,64 @@ class Widget(Gtk.DrawingArea):
         cr.stroke()
 
     def paint(self, cr, W, H):
+        pass
+
+    # ── pointer: drag to move, click to activate, right-click for the menu ──
+    def _hover(self, on):
+        self.hover = on
+        self.queue_draw()
+        return False
+
+    def _cursor(self, name):
+        win = self.get_window()
+        if win:
+            win.set_cursor(Gdk.Cursor.new_from_name(win.get_display(), name) if name else None)
+
+    # (GDK accessors, not fields: they work on every event wrapper PyGObject hands us)
+    def _on_press(self, _w, ev):
+        if ev.get_event_type() != Gdk.EventType.BUTTON_PRESS:   # ignore double-click synthesis
+            return True
+        button = ev.get_button()[1]
+        if button == 3:
+            self.desk.menu_for(self, ev)
+            return True
+        if button != 1:
+            return False
+        x, y = ev.get_coords()[-2:]       # (ok, x, y) or (x, y) depending on the binding
+        if self.desk.editing and x < 26 and y < 26:
+            self.desk.remove_widget(self.spec["id"])
+            return True
+        xr, yr = ev.get_root_coords()[-2:]
+        self._press = (xr, yr, self.spec["x"], self.spec["y"])
+        self._drag = False
+        return True
+
+    def _on_motion(self, _w, ev):
+        if not self._press:
+            return False
+        px, py, sx, sy = self._press
+        xr, yr = ev.get_root_coords()[-2:]
+        dx, dy = xr - px, yr - py
+        if not self._drag:
+            if math.hypot(dx, dy) < 6:
+                return True
+            self._drag = True
+            self._cursor("grabbing")
+        self.desk.move_widget(self, sx + dx, sy + dy)
+        return True
+
+    def _on_release(self, _w, ev):
+        if ev.get_button()[1] != 1 or not self._press:
+            return False
+        dragged, self._press, self._drag = self._drag, None, False
+        self._cursor(None)
+        if dragged:
+            self.desk.save_layout()
+        elif not self.desk.editing:
+            self.on_click()
+        return True
+
+    def on_click(self):
         pass
 
 
@@ -1625,41 +1746,69 @@ def weather_kind(code):
 
 
 class WeatherWidget(Widget):
-    """Apple Weather style: sky gradient for the current condition, white type."""
+    """Apple Weather style: sky gradient for the current condition, white type.
+    Medium adds the 3-day forecast. Click: the island panel (forecast, calendar)."""
+    KIND, NAME = "weather", "Weather"
 
-    def paint(self, cr, W, H):
+    def background(self, cr, W, H):
         w = weather()
         kind = weather_kind(w["code"]) if w else "cloudy"
-        day = w["is_day"] if w else True
-        top, bottom = SKIES[kind][0 if day else 1]
+        top, bottom = SKIES[kind][0 if (w["is_day"] if w else True) else 1]
         grad = cairo.LinearGradient(0, 0, 0, H)
         grad.add_color_stop_rgb(0, *rgb(top))
         grad.add_color_stop_rgb(1, *rgb(bottom))
         rounded_rect(cr, 0, 0, W, H, self.RADIUS)
         cr.set_source(grad)
+        cr.fill_preserve()
+        set_rgba(cr, (1, 1, 1, 0.12 if self.hover else 0.0))
         cr.fill()
-        x = 16
-        draw_text(cr, (w["area"] if w else "Weather") + " \U000f05cd", f"{FONT_UI} Semi-Bold 13", x, 14, WHITE, width=W - 28)
-        draw_text(cr, w["temp"] if w else "--°", f"{FONT_DISPLAY} Light 44", x - 2, 30, WHITE)
-        # colourful condition icon
+
+    def icon(self, cr, kind, day, glyph, x, y, size):
         sun = (1.0, 0.84, 0.04, 1)
+        moon = (0.93, 0.93, 1, 1)
         layers = {
-            "clear":  [(SUN if day else MOON, sun if day else (0.93, 0.93, 1, 1), 0, 0, 1)],
-            "partly": [(SUN if day else MOON, sun if day else (0.93, 0.93, 1, 1), -6, -5, 0.8), (CLOUD, WHITE, 3, 2, 1)],
-        }.get(kind, [(w["icon"] if w else CLOUD, WHITE, 0, 0, 1)])
-        for glyph, color, dx, dy, sc in layers:
-            draw_text(cr, glyph, f"{GLYPHS} {int(17 * sc)}", x + dx + 2, H - 64 + dy, color)
-        draw_text(cr, w["cond"] if w else "Unavailable", f"{FONT_UI} Semi-Bold 12", x, H - 42, WHITE, width=W - 28)
+            "clear":  [(SUN if day else MOON, sun if day else moon, 0, 0, 1)],
+            "partly": [(SUN if day else MOON, sun if day else moon, -6, -5, 0.8), (CLOUD, WHITE, 3, 2, 1)],
+        }.get(kind, [(glyph, WHITE, 0, 0, 1)])
+        for g, color, dx, dy, sc in layers:
+            draw_text(cr, g, f"{GLYPHS} {int(size * sc)}", x + dx, y + dy, color)
+
+    def paint(self, cr, W, H):
+        w = weather()
+        kind = weather_kind(w["code"]) if w else "cloudy"
+        day = w["is_day"] if w else True
+        x, col = 16, SMALL - 28
+        draw_text(cr, (w["area"] if w else "Weather") + " \U000f05cd", f"{FONT_UI} Semi-Bold 13", x, 14, WHITE, width=col)
+        draw_text(cr, w["temp"] if w else "--°", f"{FONT_DISPLAY} Light 44", x - 2, 30, WHITE)
+        self.icon(cr, kind, day, w["icon"] if w else CLOUD, x + 2, H - 64, 17)
+        draw_text(cr, w["cond"] if w else "Unavailable", f"{FONT_UI} Semi-Bold 12", x, H - 42, WHITE, width=col)
         draw_text(cr, f"H:{w['hi']}  L:{w['lo']}" if w else "", f"{FONT_UI} Medium 12", x, H - 25, WHITE, alpha=0.85)
+        if self.spec["size"] == "medium" and w:
+            cr.move_to(SMALL + 2, 18)
+            cr.line_to(SMALL + 2, H - 18)
+            set_rgba(cr, WHITE, 0.25)
+            cr.set_line_width(1)
+            cr.stroke()
+            cw = (W - SMALL - 16) / max(1, len(w["days"]))
+            for i, (dname, glyph, hi, lo) in enumerate(w["days"]):
+                cx = SMALL + 8 + cw * (i + 0.5)
+                draw_text(cr, "Today" if i == 0 else dname, f"{FONT_UI} Semi-Bold 12", cx, 22, WHITE, "center")
+                draw_text(cr, glyph, f"{GLYPHS} 22", cx, 56, WHITE, "center")
+                draw_text(cr, f"{hi}°", f"{FONT_UI} Semi-Bold 13", cx, 102, WHITE, "center")
+                draw_text(cr, f"{lo}°", f"{FONT_UI} Medium 12", cx, 122, WHITE, "center", alpha=0.7)
+
+    def on_click(self):
+        self.desk.shell.island.toggle("pin")
 
 
 class ClockWidget(Widget):
-    """Analog clock face like the macOS Clock widget; orange second hand."""
+    """macOS Clock widget: analog face (orange second hand) or digital. Medium shows both.
+    Click: switch analog ↔ digital."""
+    KIND, NAME = "clock", "Clock"
+    OPTIONS = {"style": ("analog", "digital")}
 
-    def paint(self, cr, W, H):
-        cx, cy, r = W / 2, H / 2, min(W, H) / 2 - 12
-        dark = COL["dark"]
-        face = (0.11, 0.11, 0.12, 0.92) if dark else (1, 1, 1, 0.95)
+    def analog(self, cr, cx, cy, r):
+        face = (0.11, 0.11, 0.12, 0.92) if COL["dark"] else (1, 1, 1, 0.95)
         ink = COL["fg"]
         cr.arc(cx, cy, r, 0, 2 * math.pi)
         set_rgba(cr, face)
@@ -1677,8 +1826,7 @@ class ClockWidget(Widget):
         cr.set_line_width(1)
         cr.stroke()
         t = time.localtime()
-        sec = t.tm_sec
-        mins = t.tm_min + sec / 60
+        mins = t.tm_min + t.tm_sec / 60
         hrs = t.tm_hour % 12 + mins / 60
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
         for frac, length, width in ((hrs / 12, r * 0.5, 4.5), (mins / 60, r * 0.78, 3.5)):
@@ -1688,7 +1836,7 @@ class ClockWidget(Widget):
             set_rgba(cr, ink)
             cr.set_line_width(width)
             cr.stroke()
-        a = sec / 60 * 2 * math.pi - math.pi / 2
+        a = t.tm_sec / 60 * 2 * math.pi - math.pi / 2
         cr.move_to(cx - math.cos(a) * 12, cy - math.sin(a) * 12)
         cr.line_to(cx + math.cos(a) * (r - 6), cy + math.sin(a) * (r - 6))
         set_rgba(cr, COL["orange"])
@@ -1700,9 +1848,35 @@ class ClockWidget(Widget):
         set_rgba(cr, face)
         cr.fill()
 
+    def digital(self, cr, x, y, align="left"):
+        t = time.localtime()
+        hm = f"{t.tm_hour % 12 or 12}:{t.tm_min:02d}"
+        w, _ = draw_text(cr, hm, f"{FONT_DISPLAY} Semi-Bold 42", x, y, COL["fg"], align)
+        ampm_x = x + w + 4 if align == "left" else x + w / 2 + 4
+        draw_text(cr, "AM" if t.tm_hour < 12 else "PM", f"{FONT_UI} Semi-Bold 13", ampm_x, y + 34, COL["dim"])
+        draw_text(cr, date_long(t), f"{FONT_UI} Medium 12", x, y + 62, COL["dim"], align)
+
+    def paint(self, cr, W, H):
+        if self.spec["size"] == "medium":
+            self.analog(cr, H / 2, H / 2, H / 2 - 12)
+            self.digital(cr, H + 8, 36)
+        elif self.opt("style") == "digital":
+            t = time.localtime()
+            draw_text(cr, DAY_NAMES[t.tm_wday], f"{FONT_UI} Semi-Bold 12", 16, 16, COL["orange"])
+            self.digital(cr, 16, 44)
+        else:
+            self.analog(cr, W / 2, H / 2, min(W, H) / 2 - 12)
+
+    def on_click(self):
+        if self.spec["size"] == "small":
+            style = "digital" if self.opt("style") == "analog" else "analog"
+            self.desk.set_option(self.spec["id"], "style", style)
+
 
 class CalendarWidget(Widget):
-    """macOS Calendar widget (medium): weekday in red, big date, month grid."""
+    """macOS Calendar widget: weekday in red, big date; medium adds the month grid.
+    Click: the island panel with the calendar."""
+    KIND, NAME = "calendar", "Calendar"
 
     def paint(self, cr, W, H):
         t = time.localtime()
@@ -1711,7 +1885,8 @@ class CalendarWidget(Widget):
         draw_text(cr, str(t.tm_mday), f"{FONT_DISPLAY} Regular 52", 15, 28, fg)
         draw_text(cr, MONTH_NAMES[t.tm_mon - 1], f"{FONT_UI} Semi-Bold 13", 18, 96, fg)
         draw_text(cr, "No events today", f"{FONT_UI} Medium 11", 18, 116, dim)
-        # month grid, weeks start on Monday
+        if self.spec["size"] != "medium":
+            return
         gx, gy, cw, ch = 150, 16, (W - 150 - 14) / 7, 18
         draw_text(cr, MONTH_NAMES[t.tm_mon - 1].upper(), f"{FONT_UI} Bold 10", gx + 4, gy, red)
         for i, d in enumerate("MTWTFSS"):
@@ -1729,33 +1904,31 @@ class CalendarWidget(Widget):
                 cr.fill()
                 draw_text(cr, str(day), f"{FONT_UI} Bold 10", x, y, WHITE, "center")
             else:
-                weekend = pos % 7 >= 5
-                draw_text(cr, str(day), f"{FONT_UI} Medium 10", x, y, dim if weekend else fg, "center")
+                draw_text(cr, str(day), f"{FONT_UI} Medium 10", x, y, dim if pos % 7 >= 5 else fg, "center")
+
+    def on_click(self):
+        self.desk.shell.island.toggle("pin")
 
 
 class StatsWidget(Widget):
-    """System widget (medium): CPU / Memory / Disk as Activity-style rings + readouts."""
-
+    """System widget: CPU / Memory / Disk as Activity-style rings; medium adds readouts and
+    thermals. Click: Control Center."""
+    KIND, NAME = "system", "System"
     RINGS = (("CPU", "pink"), ("Memory", "green"), ("Disk", "teal"))
 
-    def __init__(self, shell, w, h):
-        super().__init__(w, h)
-        self.shell = shell
-
     def values(self):
-        cpu = self.shell.cpu_last
+        cpu = self.desk.shell.cpu_last
         mem, used, total = Sys.mem()
         st = os.statvfs("/")
         disk = 100 * (1 - st.f_bavail / st.f_blocks) if st.f_blocks else 0
         return (cpu, mem, disk), (f"{cpu:.0f}%", f"{used:.1f} / {total:.0f} GB", f"{disk:.0f}%")
 
-    def paint(self, cr, W, H):
-        vals, texts = self.values()
-        cx, cy = 18 + 62, H / 2
+    def rings(self, cr, cx, cy, outer, width, gap):
+        vals, _ = self.values()
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
         for i, ((_, color), v) in enumerate(zip(self.RINGS, vals)):
-            r, c = 58 - i * 17, COL[color]
-            cr.set_line_width(13)
+            r, c = outer - i * gap, COL[color]
+            cr.set_line_width(width)
             cr.arc(cx, cy, r, 0, 2 * math.pi)
             set_rgba(cr, c, 0.22)
             cr.stroke()
@@ -1763,50 +1936,285 @@ class StatsWidget(Widget):
                 cr.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * min(v, 100) / 100)
                 set_rgba(cr, c)
                 cr.stroke()
+
+    def paint(self, cr, W, H):
+        if self.spec["size"] == "small":
+            self.rings(cr, W / 2, H / 2, 62, 13, 17)
+            return
+        self.rings(cr, 80, H / 2, 58, 13, 17)
+        _, texts = self.values()
         x = 166
         for i, ((name, color), txt) in enumerate(zip(self.RINGS, texts)):
             y = 16 + i * 46
             draw_text(cr, name, f"{FONT_UI} Semi-Bold 11", x, y, COL[color])
             draw_text(cr, txt, f"{FONT_ROUNDED} Semi-Bold 17", x, y + 14, COL["fg"], width=W - x - 64)
-        # thermals: a quiet column on the right
         for i, (k, v) in enumerate(Sys.temps().items()):
             y = 16 + i * 46
             draw_text(cr, k, f"{FONT_UI} Semi-Bold 11", W - 16, y, COL["dim"], "right")
             draw_text(cr, f"{v:.0f}°", f"{FONT_ROUNDED} Medium 15", W - 16, y + 15,
                       COL["orange"] if v >= 80 else COL["fg"], "right")
 
+    def on_click(self):
+        self.desk.shell.control.toggle("toggle")
+
+
+WIDGET_TYPES = {c.KIND: c for c in (WeatherWidget, ClockWidget, CalendarWidget, StatsWidget)}
+
+
+def clean_widgets(items):
+    """Validate a layout from disk / IPC: known types, sizes and options only, integer
+    positions within bounds, unique short ids, at most MAX_WIDGETS. Anything else is dropped."""
+    out, seen = [], set()
+    if not isinstance(items, list):
+        return None
+    for it in items[:MAX_WIDGETS]:
+        if not isinstance(it, dict) or it.get("type") not in WIDGET_TYPES:
+            continue
+        cls_ = WIDGET_TYPES[it["type"]]
+        size = it.get("size") if it.get("size") in cls_.SIZES_OK else cls_.SIZES_OK[0]
+        pos = []
+        for k in ("x", "y"):
+            v = it.get(k)
+            pos.append(max(0, min(8192, int(v))) if isinstance(v, (int, float)) and not isinstance(v, bool) else 0)
+        wid = it.get("id")
+        if not isinstance(wid, str) or not re.fullmatch(r"[a-z0-9-]{1,32}", wid) or wid in seen:
+            wid = f"{it['type']}-{len(seen) + 1}"
+            while wid in seen:
+                wid += "x"
+        seen.add(wid)
+        raw = it.get("options") if isinstance(it.get("options"), dict) else {}
+        opts = {k: v for k, v in raw.items() if k in cls_.OPTIONS and v in cls_.OPTIONS[k]}
+        out.append({"id": wid, "type": it["type"], "size": size, "x": pos[0], "y": pos[1], "options": opts})
+    return out
+
+
+def load_widgets():
+    try:
+        with open(WIDGETS_FILE) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return [dict(w, options={}) for w in DEFAULT_WIDGETS]
+    except (OSError, ValueError) as e:
+        print("widgets.json unreadable, using defaults:", e, file=sys.stderr)
+        return [dict(w, options={}) for w in DEFAULT_WIDGETS]
+    items = clean_widgets(data.get("widgets") if isinstance(data, dict) else None)
+    return items if items is not None else [dict(w, options={}) for w in DEFAULT_WIDGETS]
+
 
 class Widgets(LayerWindow):
+    """The desktop: a transparent full-screen surface under all windows."""
+
     def __init__(self, shell):
         E = GtkLayerShell.Edge
-        super().__init__("nothing-widgets", [E.TOP, E.LEFT], {E.TOP: 56, E.LEFT: 18},
+        super().__init__("nothing-widgets", [E.TOP, E.BOTTOM, E.LEFT, E.RIGHT], {},
                          layer=GtkLayerShell.Layer.BOTTOM)
         self.shell = shell
-        grid = box(vertical=True, spacing=GAP)
-        row = box(spacing=GAP)
-        self.weather = WeatherWidget(SMALL, SMALL)
-        self.clock = ClockWidget(SMALL, SMALL)
-        row.pack_start(self.weather, False, False, 0)
-        row.pack_start(self.clock, False, False, 0)
-        grid.pack_start(row, False, False, 0)
-        self.calendar = CalendarWidget(MEDIUM, SMALL)
-        grid.pack_start(self.calendar, False, False, 0)
-        self.stats = StatsWidget(shell, MEDIUM, SMALL)
-        grid.pack_start(self.stats, False, False, 0)
-        self.add(grid)
+        self.editing = False
+        self.items = {}                   # id → Widget
+        self.specs = load_widgets()
+        self._menu = None
+        ev = Gtk.EventBox()
+        ev.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        ev.connect("button-press-event", self._on_desktop_press)
+        overlay = Gtk.Overlay()
+        self.fixed = Gtk.Fixed()
+        overlay.add(self.fixed)
+        # edit-mode toolbar (bottom centre, above the dock)
+        self.toolbar = box(spacing=10, cls="desk-bar")
+        self.toolbar.set_halign(Gtk.Align.CENTER)
+        self.toolbar.set_valign(Gtk.Align.END)
+        self.toolbar.set_margin_bottom(96)
+        add_btn = Gtk.Button(label="\U000f0415  Add Widget")
+        add_cls(add_btn, "desk-btn")
+        add_btn.connect("clicked", lambda b: self._popup(self._add_menu(), b))
+        done = Gtk.Button(label="Done")
+        add_cls(done, "desk-btn", "done")
+        done.connect("clicked", lambda *_: self.edit_mode(False))
+        self.toolbar.pack_start(add_btn, False, False, 0)
+        self.toolbar.pack_start(done, False, False, 0)
+        overlay.add_overlay(self.toolbar)
+        ev.add(overlay)
+        self.add(ev)
         self.show_all()
+        self.toolbar.hide()
+        self._rebuild()
         GLib.timeout_add(1000, self._tick)
         self._n = 0
 
+    # ── layout ──
+    def _rebuild(self):
+        for w in list(self.items.values()):
+            w.destroy()
+        self.items = {}
+        for spec in self.specs:
+            w = WIDGET_TYPES[spec["type"]](self, spec)
+            self.fixed.put(w, spec["x"], spec["y"])
+            w.show()
+            self.items[spec["id"]] = w
+
+    def move_widget(self, w, x, y):
+        sw, sh = self.get_allocated_width(), self.get_allocated_height()
+        ww, wh = SIZES[w.spec["size"]]
+        x, y = int(round(x / 4) * 4), int(round(y / 4) * 4)           # 4 px grid
+        if sw > 100 and sh > 100:
+            x, y = max(0, min(x, sw - ww)), max(TOP - 16, min(y, sh - wh))
+        w.spec["x"], w.spec["y"] = x, y
+        self.fixed.move(w, x, y)
+
+    def save_layout(self):
+        try:
+            write_private(WIDGETS_FILE, json.dumps({"widgets": self.specs}, indent=2) + "\n")
+        except OSError as e:
+            print("widgets.json:", e, file=sys.stderr)
+
+    def _free_spot(self, size):
+        ww, wh = SIZES[size]
+        sw = max(self.get_allocated_width(), 1280)
+        taken = [(s["x"], s["y"], *SIZES[s["size"]]) for s in self.specs]
+        for y in range(TOP, 4000, SMALL + GAP):
+            for x in range(LEFT, sw - ww, SMALL + GAP):
+                if all(x + ww + GAP <= tx or tx + tw + GAP <= x or y + wh + GAP <= ty or ty + th + GAP <= y
+                       for tx, ty, tw, th in taken):
+                    return x, y
+        return LEFT, TOP
+
+    def add_widget(self, kind, size=None):
+        if kind not in WIDGET_TYPES or len(self.specs) >= MAX_WIDGETS:
+            return False
+        cls_ = WIDGET_TYPES[kind]
+        size = size if size in cls_.SIZES_OK else cls_.SIZES_OK[0]
+        n = 1
+        while any(s["id"] == f"{kind}-{n}" for s in self.specs):
+            n += 1
+        x, y = self._free_spot(size)
+        self.specs.append({"id": f"{kind}-{n}", "type": kind, "size": size, "x": x, "y": y, "options": {}})
+        self._rebuild()
+        self.save_layout()
+        return True
+
+    def remove_widget(self, wid):
+        before = len(self.specs)
+        self.specs = [s for s in self.specs if s["id"] != wid]
+        if len(self.specs) != before:
+            self._rebuild()
+            self.save_layout()
+        return len(self.specs) != before
+
+    def remove_type(self, kind):
+        ids = [s["id"] for s in self.specs if s["type"] == kind]
+        for wid in ids:
+            self.remove_widget(wid)
+        return bool(ids)
+
+    def resize_widget(self, wid, size):
+        for s in self.specs:
+            if s["id"] == wid and size in WIDGET_TYPES[s["type"]].SIZES_OK and s["size"] != size:
+                s["size"] = size
+                self._rebuild()
+                self.move_widget(self.items[wid], s["x"], s["y"])
+                self.save_layout()
+
+    def set_option(self, wid, key, value):
+        for s in self.specs:
+            if s["id"] == wid and value in WIDGET_TYPES[s["type"]].OPTIONS.get(key, ()):
+                s.setdefault("options", {})[key] = value
+                self.items[wid].queue_draw()
+                self.save_layout()
+
+    def reset_layout(self):
+        self.specs = [dict(w, options={}) for w in DEFAULT_WIDGETS]
+        self._rebuild()
+        self.save_layout()
+
+    def edit_mode(self, on):
+        self.editing = on
+        self.toolbar.set_visible(on)
+        for w in self.items.values():
+            w.queue_draw()
+
+    # ── menus ──
+    def _popup(self, menu, anchor=None, ev=None):
+        self._menu = menu                  # keep a reference or GTK frees it
+        menu.show_all()
+        if anchor is not None:
+            menu.popup_at_widget(anchor, Gdk.Gravity.NORTH, Gdk.Gravity.SOUTH, ev)
+        else:
+            menu.popup_at_pointer(ev)
+
+    @staticmethod
+    def _item(menu, text, cb=None, sensitive=True):
+        it = Gtk.MenuItem(label=text)
+        it.set_sensitive(sensitive)
+        if cb:
+            it.connect("activate", lambda *_: cb())
+        menu.append(it)
+        return it
+
+    def _add_menu(self):
+        m = Gtk.Menu()
+        add_cls(m, "desk-menu")
+        full = len(self.specs) >= MAX_WIDGETS
+        for kind, cls_ in WIDGET_TYPES.items():
+            for size in cls_.SIZES_OK:
+                self._item(m, f"{cls_.NAME} — {size.title()}", lambda k=kind, s=size: self.add_widget(k, s), not full)
+        return m
+
+    def _desktop_items(self, m):
+        sub = Gtk.MenuItem(label="Add Widget")
+        sub.set_submenu(self._add_menu())
+        m.append(sub)
+        self._item(m, "Done Editing" if self.editing else "Edit Widgets…", lambda: self.edit_mode(not self.editing))
+        self._item(m, "Reset Widgets", self.reset_layout)
+        m.append(Gtk.SeparatorMenuItem())
+        self._item(m, "Change Wallpaper…", lambda: spawn([os.path.join(BIN, "nothing-settings"), "appearance"]))
+
+    def menu_for(self, w, ev):
+        m = Gtk.Menu()
+        add_cls(m, "desk-menu")
+        cls_ = WIDGET_TYPES[w.spec["type"]]
+        for size in cls_.SIZES_OK:
+            mark = "✓  " if w.spec["size"] == size else "     "
+            self._item(m, mark + size.title(), lambda s=size: self.resize_widget(w.spec["id"], s))
+        for key, values in cls_.OPTIONS.items():
+            if w.spec["size"] != "small":
+                break
+            m.append(Gtk.SeparatorMenuItem())
+            for v in values:
+                mark = "✓  " if w.opt(key) == v else "     "
+                self._item(m, mark + v.title(), lambda k=key, v=v: self.set_option(w.spec["id"], k, v))
+        m.append(Gtk.SeparatorMenuItem())
+        self._item(m, f"Remove “{cls_.NAME}”", lambda: self.remove_widget(w.spec["id"]))
+        m.append(Gtk.SeparatorMenuItem())
+        self._desktop_items(m)
+        self._popup(m, ev=ev)
+
+    def _on_desktop_press(self, _w, ev):
+        button = ev.get_button()[1]
+        if button == 3:
+            m = Gtk.Menu()
+            add_cls(m, "desk-menu")
+            self._desktop_items(m)
+            self._popup(m, ev=ev)
+            return True
+        if button == 1 and self.editing:
+            self.edit_mode(False)
+        return False
+
     def _tick(self):
         self._n += 1
-        self.clock.queue_draw()
-        if self._n % 3 == 0:
-            self.stats.queue_draw()
-        if self._n % 60 == 0:
-            self.calendar.queue_draw()
-            self.weather.queue_draw()
+        for w in self.items.values():
+            if isinstance(w, ClockWidget):
+                w.queue_draw()
+            elif isinstance(w, StatsWidget) and self._n % 3 == 0:
+                w.queue_draw()
+            elif self._n % 60 == 0:
+                w.queue_draw()
         return True
+
+    def redraw_weather(self):
+        for w in self.items.values():
+            if isinstance(w, WeatherWidget):
+                w.queue_draw()
 
 
 # ═════════════════════════════ SHELL ═════════════════════════════
@@ -1882,7 +2290,7 @@ class Shell:
     def _weather_tick(self):
         if os.path.exists(WEATHER_SCRIPT):
             in_thread(lambda: run([WEATHER_SCRIPT, "bar"], timeout=15),
-                      lambda _r: (self.island.refresh_compact(), self.widgets.weather.queue_draw()))
+                      lambda _r: (self.island.refresh_compact(), self.widgets.redraw_weather()))
         return True
 
     # ── toggles shared by island and control center ──
@@ -1966,16 +2374,26 @@ class Shell:
         except OSError:
             pass
         srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        srv.bind(SOCK)
+        old = os.umask(0o177)              # the socket is created 0600: owner only
+        try:
+            srv.bind(SOCK)
+        finally:
+            os.umask(old)
         srv.listen(8)
         GLib.io_add_watch(srv.fileno(), GLib.IO_IN, self._accept, srv)
 
     def _accept(self, _fd, _cond, srv):
         conn, _ = srv.accept()
         try:
+            # only processes of this user may drive the shell (defence in depth: the
+            # socket is 0600 inside the 0700 $XDG_RUNTIME_DIR already)
+            creds = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+            _pid, uid, _gid = struct.unpack("3i", creds)
+            if uid != os.getuid():
+                return True
             conn.settimeout(1)
             data = b""
-            while True:
+            while len(data) < 4096:        # commands are short; ignore anything larger
                 chunk = conn.recv(1024)
                 if not chunk:
                     break
@@ -1987,6 +2405,25 @@ class Shell:
         finally:
             conn.close()
         return True
+
+    def _widgets_cmd(self, a):
+        d = self.widgets
+        sub = a[0] if a else "list"
+        if sub == "list":
+            return json.dumps(d.specs, indent=2)
+        if sub == "types":
+            return " ".join(f"{k}({'/'.join(c.SIZES_OK)})" for k, c in WIDGET_TYPES.items())
+        if sub == "add" and len(a) in (2, 3):
+            return "ok" if d.add_widget(a[1], a[2] if len(a) == 3 else None) else "unknown type, or 24 widgets already"
+        if sub == "remove" and len(a) == 2:
+            return "ok" if (d.remove_widget(a[1]) or d.remove_type(a[1])) else "no such widget"
+        if sub in ("edit", "done"):
+            d.edit_mode(sub == "edit")
+            return "ok"
+        if sub == "reset":
+            d.reset_layout()
+            return "ok"
+        return "usage: nothing-shell widgets list|types|add TYPE [small|medium]|remove ID|TYPE|edit|done|reset"
 
     def handle(self, args):
         if not args:
@@ -2010,6 +2447,8 @@ class Shell:
                                "visible": c.get_visible(), "size": c.get_size()[:]})
         elif cmd == "reload-css":
             return self.reload_css()
+        elif cmd == "widgets":
+            return self._widgets_cmd(args[1:])
         elif cmd == "quit":
             GLib.idle_add(Gtk.main_quit)
         else:

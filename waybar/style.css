@@ -31,7 +31,7 @@ tooltip {
 tooltip label { color: @fg; padding: 3px 5px; }
 
 /* every item: a soft rounded hover target, like macOS menu extras */
-#custom-apple, #window, #custom-more, #tray, #cpu, #memory, #network, #bluetooth,
+#custom-logo, #custom-more, #tray, #cpu, #memory, #network, #bluetooth,
 #battery, #custom-clipboard, #custom-quick, #custom-clock {
   color: @fg;
   padding: 0 8px;
@@ -39,21 +39,17 @@ tooltip label { color: @fg; padding: 3px 5px; }
   border-radius: 7px;
   transition: all 0.2s ease-in-out;
 }
-#custom-apple:hover, #custom-more:hover, #cpu:hover, #memory:hover, #network:hover,
+#custom-logo:hover, #custom-more:hover, #cpu:hover, #memory:hover, #network:hover,
 #bluetooth:hover, #battery:hover, #custom-clipboard:hover, #custom-quick:hover,
 #custom-clock:hover { background: @hover; }
-#custom-apple:active, #custom-quick:active, #custom-clock:active { background: @press; }
+#custom-logo:active, #custom-quick:active, #custom-clock:active { background: @press; }
 
-/* ── left: Apple menu · app name · title ── */
-#custom-apple {
-  font-size: 16px;
-  padding: 0 11px 0 12px;
+/* ── left: Tux, the system menu ── */
+#custom-logo {
+  font-size: 17px;
+  padding: 0 12px 0 12px;
   margin-left: 4px;
 }
-#window { padding: 0 6px; margin: 4px 0; }
-window#waybar.empty #window { padding: 0; }
-#window.app label, #window.app { font-weight: 700; }
-#window:not(.app) { color: @dim; font-weight: 400; }
 
 /* ── right ── */
 #system { padding: 0 2px; }
@@ -80,9 +76,9 @@ window#waybar.empty #window { padding: 0; }
 #battery.warning:not(.charging)  { color: @warn; }
 #battery.critical:not(.charging) { color: @alert; }
 
-/* date & time, bold like the macOS menu-bar clock */
+/* date */
 #custom-clock {
-  font-weight: 700;
+  font-weight: 600;
   font-feature-settings: "tnum";
   padding: 0 12px;
   margin-right: 4px;
