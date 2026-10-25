@@ -2909,24 +2909,19 @@ class Widgets(LayerWindow):
 
 # ═════════════════════════════ SESSION MENU ═════════════════════════════
 # Super+Shift+X: the screen frosts over; a lock-screen clock, and a floating Dock-style glass bar
-# whose border turns through accent → accent2 like Hyprland's animated borders. Five squircle
-# tiles (Shut Down · Restart · Sleep · Lock · Log Out) magnify like the Dock, each in its own
-# two-colour gradient. Shut Down, Restart and Log Out run a countdown first (Enter: now · Esc:
-# cancel). Keys: ← → / Tab, Enter, P R S L E, Esc. Mouse: hover, click; click outside closes.
+# whose border turns through accent → accent2 like Hyprland's animated borders. Five glass
+# squircle tiles (Shut Down · Restart · Sleep · Lock · Log Out); the chosen one gets a turning
+# gradient ring. Keys: ← → / Tab, Enter, P R S L E (act at once), Esc. Mouse: hover, click;
+# a click outside closes. Everything but the two turning rings is drawn once into a cache.
 SESSION_ACTIONS = (
-    # key, label, glyph, gradient (two palette colours), command, needs countdown
-    ("shutdown", "Shut Down", "\U000f0425", ("red", "orange"),   ["systemctl", "poweroff"], True),
-    ("restart",  "Restart",   "\U000f0709", ("orange", "yellow"), ["systemctl", "reboot"], True),
-    ("sleep",    "Sleep",     "\U000f0904", ("indigo", "purple"), ["sh", "-c", "loginctl lock-session; sleep 0.6; systemctl suspend"], False),
-    ("lock",     "Lock",      "\U000f033e", ("blue", "teal"),     ["loginctl", "lock-session"], False),
-    ("logout",   "Log Out",   "\U000f0343", ("teal", "green"),    ["hyprctl", "dispatch", "hl.dsp.exit()"], True),
+    # key, label, glyph, command
+    ("shutdown", "Shut Down", "\U000f0425", ["systemctl", "poweroff"]),
+    ("restart",  "Restart",   "\U000f0709", ["systemctl", "reboot"]),
+    ("sleep",    "Sleep",     "\U000f0904", ["sh", "-c", "loginctl lock-session; sleep 0.6; systemctl suspend"]),
+    ("lock",     "Lock",      "\U000f033e", ["loginctl", "lock-session"]),
+    ("logout",   "Log Out",   "\U000f0343", ["hyprctl", "dispatch", "hl.dsp.exit()"]),
 )
 SESSION_KEYS = {"p": "shutdown", "r": "restart", "s": "sleep", "l": "lock", "e": "logout"}
-COUNTDOWN_S = 10
-
-
-def lighter(c, f=0.35):
-    return tuple(ch + (1 - ch) * f for ch in c[:3])
 
 
 def text_path(cr, s, font, x, y, align="left"):
@@ -2951,7 +2946,7 @@ def turning_gradient(cx, cy, reach, angle, a, b):
 
 
 class Session(LayerWindow):
-    TILE, GAP, PAD = 76, 18, 18
+    TILE, GAP, PAD, RADIUS = 76, 18, 18, 30
 
     def __init__(self, shell):
         E = GtkLayerShell.Edge
@@ -2968,14 +2963,13 @@ class Session(LayerWindow):
         self.add(self.area)
         self.open = False
         self.sel = 3                          # Lock: the harmless default
-        self.t = 0.0                          # open animation 0 → 1
+        self.t = 0.0                          # fade 0 → 1
         self.closing = False
-        self.scale = [1.0] * len(SESSION_ACTIONS)
-        self.countdown = None                 # (action index, deadline)
         self._tick_id = None
         self._started = 0.0
         self._facts = ""
-        self._rects = []
+        self._cache = None                    # (key, surface) — the still part of the picture
+        self._bar = (0, 0, 0, 0)
         self.area.show()
 
     # ── open / close ──
@@ -2986,46 +2980,34 @@ class Session(LayerWindow):
             self.close()
 
     def show_(self):
-        self.open, self.closing, self.countdown = True, False, None
+        self.open, self.closing = True, False
         self.sel, self.t, self._started = 3, 0.0, time.monotonic()
-        self.scale = [1.0] * len(SESSION_ACTIONS)
         self._facts = self._load_facts()
+        self._cache = None
         self.show()
         self.present()
         if not self._tick_id:
             self._tick_id = GLib.timeout_add(16, self._tick)
 
     def close(self):
-        if self.countdown:                    # Esc during a countdown only cancels it
-            self.countdown = None
-            return
         self.closing = True
         self._started = time.monotonic()
 
     def _finish_close(self):
         self.open = self.closing = False
+        self._cache = None                    # don't keep a screen-sized surface around
         self.hide()
         if self._tick_id:
             GLib.source_remove(self._tick_id)
             self._tick_id = None
 
-    # ── actions ──
     def choose(self, i):
-        key, label, _g, _c, cmd, confirm = SESSION_ACTIONS[i]
         self.sel = i
-        if confirm and not (self.countdown and self.countdown[0] == i):
-            self.countdown = (i, time.monotonic() + COUNTDOWN_S)
-            return
-        self.run(i)
-
-    def run(self, i):
-        cmd = SESSION_ACTIONS[i][4]
-        self.countdown = None
         self._finish_close()
         if os.environ.get("NOTHING_DRYRUN"):
             print("session:", SESSION_ACTIONS[i][0], file=sys.stderr)
             return
-        spawn(cmd)
+        spawn(SESSION_ACTIONS[i][3])
 
     # ── animation loop ──
     def _tick(self):
@@ -3036,30 +3018,34 @@ class Session(LayerWindow):
                 self._tick_id = None          # returning False ends this source
                 self._finish_close()
                 return False
-        else:
-            self.t = min(1.0, (now - self._started) / 0.32)
-        for i in range(len(self.scale)):              # Dock magnification
-            d = abs(i - self.sel)
-            target = 1.18 if d == 0 else 1.06 if d == 1 else 1.0
-            self.scale[i] += (target - self.scale[i]) * 0.22
-        if self.countdown and now >= self.countdown[1]:
-            self._tick_id = None
-            self.run(self.countdown[0])
-            return False
-        self.area.queue_draw()
+            self.area.queue_draw()
+        elif self.t < 1:
+            self.t = min(1.0, (now - self._started) / 0.28)
+            self.area.queue_draw()
+        else:                                 # only the rings move: repaint just the bar
+            x, y, w, h = self._bar
+            self.area.queue_draw_area(int(x) - 12, int(y) - 12, int(w) + 24, int(h) + 24)
         return True
 
     # ── input ──
     def _hit(self, x, y):
-        for i, (rx, ry, rw, rh) in enumerate(self._rects):
-            if rx - self.GAP / 2 <= x <= rx + rw + self.GAP / 2 and ry <= y <= ry + rh:
-                return i
-        return None
+        bx, by, _w, _h = self._bar
+        T, G, P = self.TILE, self.GAP, self.PAD
+        if not by + P <= y <= by + P + T:
+            return None
+        i = int((x - bx - P + G / 2) // (T + G))
+        return i if 0 <= i < len(SESSION_ACTIONS) else None
+
+    def _select(self, i):
+        if i != self.sel:
+            self.sel = i
+            x, y, w, h = self._bar
+            self.area.queue_draw_area(int(x) - 12, int(y) - 12, int(w) + 24, int(h) + 24)
 
     def _on_motion(self, _w, ev):
         i = self._hit(*ev.get_coords()[-2:])
-        if i is not None and not self.countdown:
-            self.sel = i
+        if i is not None:
+            self._select(i)
         return True
 
     def _on_click(self, _w, ev):
@@ -3067,7 +3053,6 @@ class Session(LayerWindow):
             return True
         i = self._hit(*ev.get_coords()[-2:])
         if i is None:
-            self.countdown = None
             self.close()
         else:
             self.choose(i)
@@ -3078,10 +3063,10 @@ class Session(LayerWindow):
         n = len(SESSION_ACTIONS)
         if name == "escape":
             self.close()
-        elif name in ("left", "iso_left_tab", "up") and not self.countdown:
-            self.sel = (self.sel - 1) % n
-        elif name in ("right", "tab", "down") and not self.countdown:
-            self.sel = (self.sel + 1) % n
+        elif name in ("left", "iso_left_tab", "up"):
+            self._select((self.sel - 1) % n)
+        elif name in ("right", "tab", "down"):
+            self._select((self.sel + 1) % n)
         elif name in ("return", "kp_enter", "space"):
             self.choose(self.sel)
         elif name in SESSION_KEYS:
@@ -3104,183 +3089,96 @@ class Session(LayerWindow):
         facts.append(f"\U000f0954  {Sys.uptime().lower()}")
         return "     ·     ".join(facts)
 
-    def _draw(self, _w, cr):
-        W, H = self.area.get_allocated_width(), self.area.get_allocated_height()
-        now = time.monotonic()
-        e = 1 - (1 - self.t) ** 3                       # ease-out
+    def _layout(self, W, H):
+        n, T, G, P = len(SESSION_ACTIONS), self.TILE, self.GAP, self.PAD
+        bw, bh = n * T + (n - 1) * G + 2 * P, T + 2 * P
+        self._bar = ((W - bw) / 2, H * 0.60 - bh / 2, bw, bh)
+
+    def _paint_still(self, cr, W, H):
+        """Backdrop, clock, bar glass, tiles, text — everything that doesn't turn."""
         dark = COL["dark"]
         fg, dim, mute = COL["fg"], COL["dim"], COL["mute"]
-        acc, acc2 = COL["accent"], COL["accent2"]
-        sel_a, sel_b = (COL[c] for c in SESSION_ACTIONS[self.sel][3])
-        # backdrop: scrim over the blur, two drifting accent orbs, a wash of the chosen action
-        cr.set_source_rgba(*((0.02, 0.02, 0.04) if dark else (0.94, 0.94, 0.97)), (0.55 if dark else 0.45) * e)
-        cr.paint()
-        drift = now * 0.25
-        for (ox, oy, c, a_) in ((0.28 + 0.04 * math.sin(drift), 0.72 + 0.03 * math.cos(drift * 1.3), acc, 0.30),
-                                (0.74 + 0.04 * math.cos(drift * 0.8), 0.30 + 0.04 * math.sin(drift), acc2, 0.26),
-                                (0.50, 0.66, sel_a, 0.16)):
-            r = max(W, H) * 0.42
-            orb = cairo.RadialGradient(W * ox, H * oy, 0, W * ox, H * oy, r)
-            orb.add_color_stop_rgba(0, c[0], c[1], c[2], a_ * e * (1 if dark else 0.7))
+        # scrim + two soft accent glows, drawn at quarter size and scaled up (they're blurry anyway)
+        q = 4
+        bg = cairo.ImageSurface(cairo.FORMAT_ARGB32, max(1, W // q), max(1, H // q))
+        b = cairo.Context(bg)
+        b.set_source_rgba(*((0.02, 0.02, 0.04) if dark else (0.94, 0.94, 0.97)), 0.55 if dark else 0.45)
+        b.paint()
+        w4, h4 = W / q, H / q
+        for ox, oy, c, a_ in ((0.28, 0.72, COL["accent"], 0.26), (0.74, 0.30, COL["accent2"], 0.22)):
+            r = max(w4, h4) * 0.42
+            orb = cairo.RadialGradient(w4 * ox, h4 * oy, 0, w4 * ox, h4 * oy, r)
+            orb.add_color_stop_rgba(0, c[0], c[1], c[2], a_ * (1 if dark else 0.7))
             orb.add_color_stop_rgba(1, c[0], c[1], c[2], 0)
-            cr.set_source(orb)
-            cr.paint()
-
-        rise = (1 - e) * 26
-        cr.push_group()
-        # ── lock-screen clock ──
-        lt = time.localtime()
+            b.set_source(orb)
+            b.paint()
+        cr.save()
+        cr.scale(q, q)
+        cr.set_source_surface(bg, 0, 0)
+        cr.get_source().set_filter(cairo.FILTER_BILINEAR)
+        cr.paint()
+        cr.restore()
+        # lock-screen clock
+        draw_text(cr, date_long(), f"{FONT_DISPLAY} Semi-Bold 20", W / 2, H * 0.15, fg, "center", 0.85)
+        top = H * 0.15 + 30
         cr.new_path()
-        draw_text(cr, date_long(), f"{FONT_DISPLAY} Semi-Bold 20", W / 2, H * 0.15 + rise, fg, "center", 0.85)
-        _tw, th = text_path(cr, time.strftime("%H:%M", lt), f"{FONT_ROUNDED} Bold 112", W / 2, H * 0.15 + 30 + rise, "center")
-        top = H * 0.15 + 30 + rise
+        _tw, th = text_path(cr, time.strftime("%H:%M"), f"{FONT_ROUNDED} Bold 112", W / 2, top, "center")
         g = cairo.LinearGradient(0, top + th * 0.15, 0, top + th * 0.9)
         g.add_color_stop_rgba(0, *fg[:3], 0.95)
         g.add_color_stop_rgba(1, *fg[:3], 0.55)
         cr.set_source(g)
         cr.fill()
-
-        # ── the floating bar ──
-        n, T, G, P = len(SESSION_ACTIONS), self.TILE, self.GAP, self.PAD
-        sizes = [T * k for k in self.scale]             # magnified tiles push the others apart
-        bw, bh = sum(sizes) + (n - 1) * G + 2 * P, T + 2 * P
-        bx, by = (W - bw) / 2, H * 0.60 - bh / 2 + rise
-        angle = now * 0.9                                # border turns ~1 rev / 7 s
-        for k, alpha in ((10, 0.05), (6, 0.08), (3, 0.12)):   # soft gradient glow
-            rounded_rect(cr, bx - k, by - k, bw + 2 * k, bh + 2 * k, 30 + k)
-            cr.set_source(turning_gradient(W / 2, by + bh / 2, bw / 2, angle, acc, acc2))
-            cr.push_group()
-            cr.fill()
-            pat = cr.pop_group()
-            cr.set_source(pat)
-            cr.paint_with_alpha(alpha)
-        rounded_rect(cr, bx, by, bw, bh, 30)
+        # bar glass
+        bx, by, bw, bh = self._bar
+        rounded_rect(cr, bx, by, bw, bh, self.RADIUS)
         cr.set_source_rgba(*((0.11, 0.11, 0.13, 0.78) if dark else (0.98, 0.98, 1.0, 0.80)))
         cr.fill()
-        rounded_rect(cr, bx + 0.75, by + 0.75, bw - 1.5, bh - 1.5, 29.25)
+        # tiles
+        T, G, P = self.TILE, self.GAP, self.PAD
+        for i, (key, _label, glyph, _cmd) in enumerate(SESSION_ACTIONS):
+            tx, ty = bx + P + i * (T + G), by + P
+            rounded_rect(cr, tx, ty, T, T, T * 0.28)
+            cr.set_source_rgba(*((1, 1, 1, 0.07) if dark else (0, 0, 0, 0.04)))
+            cr.fill_preserve()
+            set_rgba(cr, COL["line"])
+            cr.set_line_width(1)
+            cr.stroke()
+            draw_text(cr, glyph, f"{GLYPHS} 30", tx + T / 2, ty + T / 2 - 22, fg, "center")
+            letter = [k for k, v in SESSION_KEYS.items() if v == key][0].upper()
+            draw_text(cr, letter, "JetBrainsMono Nerd Font Bold 8", tx + T - 12, ty + T - 18, dim, "center", 0.7)
+        draw_text(cr, self._facts, "JetBrainsMono Nerd Font 10", W / 2, by + bh + 46, dim, "center", 0.9)
+        draw_text(cr, "←→ choose     ↵ confirm     p r s l e  shortcuts     esc close",
+                  "JetBrainsMono Nerd Font 9", W / 2, H - 64, mute, "center")
+
+    def _draw(self, _w, cr):
+        W, H = self.area.get_allocated_width(), self.area.get_allocated_height()
+        self._layout(W, H)
+        key = (W, H, time.strftime("%H:%M"), COL["dark"], COL["accent"], COL["accent2"])
+        if not self._cache or self._cache[0] != key:
+            surf = cr.get_target().create_similar(cairo.CONTENT_COLOR_ALPHA, W, H)
+            self._paint_still(cairo.Context(surf), W, H)
+            self._cache = (key, surf)
+        e = 1 - (1 - self.t) ** 3                       # ease-out
+        cr.set_source_surface(self._cache[1], 0, 0)
+        cr.paint_with_alpha(e)
+        # live parts: the chosen tile's lift, the bar's border and the ring around the chosen tile
+        acc, acc2 = COL["accent"], COL["accent2"]
+        angle = time.monotonic() * 0.9                  # ~1 turn / 7 s
+        bx, by, bw, bh = self._bar
+        cr.push_group()
+        rounded_rect(cr, bx + 0.75, by + 0.75, bw - 1.5, bh - 1.5, self.RADIUS - 0.75)
         cr.set_source(turning_gradient(W / 2, by + bh / 2, bw / 2, angle, acc, acc2))
         cr.set_line_width(1.5)
         cr.stroke()
-        # inner top highlight
-        rounded_rect(cr, bx + 2, by + 2, bw - 4, bh - 4, 28)
-        hl = cairo.LinearGradient(0, by, 0, by + bh * 0.5)
-        hl.add_color_stop_rgba(0, 1, 1, 1, 0.10 if dark else 0.5)
-        hl.add_color_stop_rgba(1, 1, 1, 1, 0)
-        cr.set_source(hl)
-        cr.set_line_width(1)
-        cr.stroke()
-
-        # ── tiles ──
-        self._rects = []
-        base_y = by + P + T                              # tiles grow upwards from here, like the Dock
-        x = bx + P
-        for i, (key, label, glyph, (ca, cb), _cmd, _c) in enumerate(SESSION_ACTIONS):
-            appear = max(0.0, min(1.0, self.t * 1.8 - i * 0.12))
-            ap = 1 - (1 - appear) ** 3
-            sz = sizes[i]
-            tx = x
-            ty = base_y - sz + (1 - ap) * 24
-            x += sz + G
-            self._rects.append((tx, ty, sz, sz))
-            a_, b_ = COL[ca], COL[cb]
-            active = i == self.sel
-            rad = sz * 0.28
-            cr.push_group()
-            if active:
-                glow = cairo.RadialGradient(tx + sz / 2, ty + sz / 2, sz * 0.3, tx + sz / 2, ty + sz / 2, sz * 1.1)
-                glow.add_color_stop_rgba(0, a_[0], a_[1], a_[2], 0.45)
-                glow.add_color_stop_rgba(1, a_[0], a_[1], a_[2], 0)
-                cr.set_source(glow)
-                cr.paint()
-                fill = cairo.LinearGradient(tx, ty, tx + sz, ty + sz)
-                fill.add_color_stop_rgb(0, *a_[:3])
-                fill.add_color_stop_rgb(1, *b_[:3])
-                rounded_rect(cr, tx, ty, sz, sz, rad)
-                cr.set_source(fill)
-                cr.fill()
-            else:
-                rounded_rect(cr, tx, ty, sz, sz, rad)
-                cr.set_source_rgba(*((1, 1, 1, 0.08) if dark else (0, 0, 0, 0.05)))
-                cr.fill_preserve()
-                set_rgba(cr, COL["line"])
-                cr.set_line_width(1)
-                cr.stroke()
-            # glass sheen
-            rounded_rect(cr, tx + 1, ty + 1, sz - 2, sz - 2, rad - 1)
-            sheen = cairo.LinearGradient(0, ty, 0, ty + sz * 0.55)
-            sheen.add_color_stop_rgba(0, 1, 1, 1, 0.30 if active else 0.08)
-            sheen.add_color_stop_rgba(1, 1, 1, 1, 0)
-            cr.set_source(sheen)
-            cr.fill()
-            # turning two-colour ring on the selected tile; it becomes the countdown
-            if active:
-                ring = turning_gradient(tx + sz / 2, ty + sz / 2, sz / 2, -angle * 1.6, lighter(a_, 0.5), b_)
-                rounded_rect(cr, tx - 5, ty - 5, sz + 10, sz + 10, rad + 5)
-                cr.set_line_width(2.5)
-                if self.countdown and self.countdown[0] == i:
-                    frac = max(0.0, (self.countdown[1] - now) / COUNTDOWN_S)
-                    s_ = sz + 10
-                    perim = 4 * s_ - 8 * (rad + 5) + 2 * math.pi * (rad + 5)
-                    set_rgba(cr, WHITE, 0.15)
-                    cr.stroke_preserve()
-                    cr.set_dash([perim * frac, perim])
-                    cr.set_line_cap(cairo.LINE_CAP_ROUND)
-                cr.set_source(ring)
-                cr.stroke()
-                cr.set_dash([])
-            gs = 30 * self.scale[i]
-            draw_text(cr, glyph, f"{GLYPHS} {gs:.0f}", tx + sz / 2, ty + sz / 2 - gs * 0.72,
-                      WHITE if active else fg, "center")
-            letter = [k for k, v in SESSION_KEYS.items() if v == key][0].upper()
-            draw_text(cr, letter, "JetBrainsMono Nerd Font Bold 8", tx + sz - 12, ty + sz - 18,
-                      WHITE if active else dim, "center", 0.7)
-            cr.pop_group_to_source()
-            cr.paint_with_alpha(ap)
-
-        # ── label bubble above the selected tile (Dock-style) ──
-        tx, ty, sz, _ = self._rects[self.sel]
-        if self.countdown:
-            i_, deadline = self.countdown
-            left = max(0, math.ceil(deadline - now))
-            verb = {"shutdown": "Shutting down", "restart": "Restarting", "logout": "Logging out"}[SESSION_ACTIONS[i_][0]]
-            text, hint = f"{verb} in {left} s", "↵ now  ·  esc cancel"
-        else:
-            text, hint = SESSION_ACTIONS[self.sel][1], ""
-        layout = PangoCairo.create_layout(cr)
-        layout.set_font_description(Pango.FontDescription.from_string(f"{FONT_UI} Semi-Bold 13"))
-        layout.set_text(text, -1)
-        lw, lh = layout.get_pixel_size()
-        hw = 0
-        if hint:
-            hl_ = PangoCairo.create_layout(cr)
-            hl_.set_font_description(Pango.FontDescription.from_string("JetBrainsMono Nerd Font 9"))
-            hl_.set_text(hint, -1)
-            hw = hl_.get_pixel_size()[0] + 14
-        pw, ph = lw + hw + 28, lh + 14
-        px, py = tx + sz / 2 - pw / 2, ty - ph - 18
-        rounded_rect(cr, px, py, pw, ph, ph / 2)
-        cr.set_source_rgba(*((0.16, 0.16, 0.18, 0.92) if dark else (1, 1, 1, 0.95)))
-        cr.fill_preserve()
-        cr.set_source(turning_gradient(px + pw / 2, py + ph / 2, pw / 2, angle, sel_a, sel_b))
-        cr.set_line_width(1)
-        cr.stroke()
-        cr.move_to(tx + sz / 2, py + ph)                 # little pointer
-        cr.rel_line_to(-6, 0)
-        cr.rel_line_to(6, 6)
-        cr.rel_line_to(6, -6)
-        cr.close_path()
-        cr.set_source_rgba(*((0.16, 0.16, 0.18, 0.92) if dark else (1, 1, 1, 0.95)))
+        T, G, P = self.TILE, self.GAP, self.PAD
+        tx, ty = bx + P + self.sel * (T + G), by + P
+        rounded_rect(cr, tx, ty, T, T, T * 0.28)
+        cr.set_source_rgba(*((1, 1, 1, 0.09) if COL["dark"] else (0, 0, 0, 0.05)))
         cr.fill()
-        cr.move_to(px + 14, py + 7)
-        set_rgba(cr, fg)
-        PangoCairo.show_layout(cr, layout)
-        if hint:
-            draw_text(cr, hint, "JetBrainsMono Nerd Font 9", px + 14 + lw + 14, py + 9, dim)
-
-        # ── status line + key hints ──
-        draw_text(cr, self._facts, "JetBrainsMono Nerd Font 10", W / 2, by + bh + 46, dim, "center", 0.9)
-        draw_text(cr, "←→ choose     ↵ confirm     p r s l e  shortcuts     esc close",
-                  "JetBrainsMono Nerd Font 9", W / 2, H - 64 + rise, mute, "center")
+        rounded_rect(cr, tx - 5, ty - 5, T + 10, T + 10, T * 0.28 + 5)
+        cr.set_source(turning_gradient(tx + T / 2, ty + T / 2, T / 2, -angle * 1.6, acc, acc2))
+        cr.set_line_width(2)
+        cr.stroke()
         cr.pop_group_to_source()
         cr.paint_with_alpha(e)
 

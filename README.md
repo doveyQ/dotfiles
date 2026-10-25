@@ -54,7 +54,7 @@ Made by [doveyQ](https://github.com/doveyQ) · co-authored with **Claude** (Anth
 - **Launcher** (`Super` `D`) — Spotlight meets Hyprland: glass inside a two-colour gradient
   frame, big search, an Apps · Run · Windows segmented control, gradient selection.
   **Session menu** (`Super` `Shift` `X`) — the screen frosts over: a lock-screen clock and a
-  floating Dock-style bar with a turning gradient border; tiles magnify, risky actions count down.
+  floating Dock-style bar with a turning gradient border; `P R S L E` act at once.
 - **Dock** (nwg-dock) and **night mode** with a schedule (hyprsunset).
 
 **Windows & apps**

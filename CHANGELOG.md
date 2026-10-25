@@ -9,10 +9,10 @@ project uses [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Session menu** (`Super` `Shift` `X`) is now drawn by nothing-shell: a full-screen frost
   with a lock-screen clock, a floating Dock-style glass bar whose border turns through accent →
-  accent2 (Hyprland's animated border), squircle tiles in two-colour gradients that magnify
-  like the Dock, a label bubble, and a fastfetch-style status line (Hyprland, kernel, uptime).
-  Shut Down, Restart and Log Out count down 10 s first (Enter: now · Esc: cancel). The rofi
-  card stays as the fallback.
+  accent2 (Hyprland's animated border), glass squircle tiles with a turning ring on the chosen
+  one, and a fastfetch-style status line (Hyprland, kernel, uptime). Keys act at once. Only
+  the rings are redrawn per frame (the rest is cached), so it stays smooth. The rofi card
+  stays as the fallback.
 - **Launcher** (`Super` `D`): a two-colour gradient frame around the glass, an Apps · Run ·
   Windows segmented control, gradient selection and a key-hint bar.
 - Themes gain a second accent colour, `accent2` (each accent's neighbour on the colour wheel),
