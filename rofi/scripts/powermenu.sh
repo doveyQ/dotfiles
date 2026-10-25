@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# Session menu.  Single-key accelerators: p r s l e · Esc cancels.
+# Session menu (Super+Shift+X): a centred card listing the five actions.
+# Single-key accelerators: p r s l e · Enter chooses · Esc cancels.
 theme=~/.config/rofi/powermenu.rasi
-hint=$(sed -n 's/^ *dim: *\(#[0-9a-fA-F]\{6\}\).*/\1/p' ~/.config/hypr/theme/palette.rasi 2>/dev/null); hint=${hint:-#a39c91}
 pidof rofi >/dev/null && { pkill -x rofi; exit 0; }
 
-tile() { printf "<span font_family='Symbols Nerd Font' size='26pt'>%s</span>\n\n<span size='12pt' weight='500'>%s</span>  <span size='10pt' foreground='%s'>%s</span>" "$1" "$2" "$hint" "$3"; }
+row() {   # row <glyph> <label> <key>
+  printf "<span font_family='Symbols Nerd Font'>%s</span>    %s    <span size='small' alpha='50%%'>%s</span>" "$1" "$2" "$3"
+}
 
 entries=(
-  "$(tile 󰐥 'Power off' 'P')"
-  "$(tile 󰜉 'Restart' 'R')"
-  "$(tile 󰤄 'Sleep' 'S')"
-  "$(tile 󰌾 'Lock' 'L')"
-  "$(tile 󰍃 'Log out' 'E')"
+  "$(row 󰐥 'Shut Down' 'P')"
+  "$(row 󰜉 'Restart' 'R')"
+  "$(row 󰤄 'Sleep' 'S')"
+  "$(row 󰌾 'Lock' 'L')"
+  "$(row 󰍃 'Log Out' 'E')"
 )
+who="$(id -un) · $(uptime -p 2>/dev/null | sed 's/^up //')"
 
-choice=$(printf '%s|' "${entries[@]}" | rofi -dmenu -sep '|' -eh 5 -markup-rows -format i \
-  -no-custom -theme "$theme" -selected-row 3 -u 0 \
+choice=$(printf '%s\n' "${entries[@]}" | rofi -dmenu -markup-rows -format i \
+  -no-custom -theme "$theme" -selected-row 3 -u 0 -theme-str "textbox-sub { content: \"$who\"; }" \
   -kb-custom-1 p -kb-custom-2 r -kb-custom-3 s -kb-custom-4 l -kb-custom-5 e \
   -kb-cancel "Escape,q")
 code=$?

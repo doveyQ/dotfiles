@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Settings
-GenericName=Nothing Settings Hub
+GenericName=System Settings
 Comment=Wi-Fi, Bluetooth, Sound, Displays, Appearance, Keyboard, Wallpaper
 Exec=@BIN@/nothing-settings
 Icon=preferences-system

@@ -1,5 +1,6 @@
-/* Launcher — Spotlight: one frosted glass panel, large search field, compact rows
-   Colours + fonts: ~/.config/hypr/theme/palette.rasi (light / dark)             */
+/* Launcher (Super+D) — Spotlight: one frosted glass panel, large search field, app icons
+   with their category; the selected row in your accent colour.
+   Colours + fonts: ~/.config/hypr/theme/palette.rasi (light / dark, accent)                */
 @import "~/.config/hypr/theme/palette.rasi"
 
 configuration {
@@ -9,7 +10,7 @@ configuration {
   display-drun: "Apps";
   display-run: "Run";
   display-window: "Windows";
-  drun-display-format: "{name}";
+  drun-display-format: "{name}<span size='small' alpha='55%'>   {generic}</span>";
   sort: true;
   sorting-method: "fzf";
   hover-select: true;
@@ -25,22 +26,23 @@ configuration {
 }
 
 window {
-  width: 680px;
-  border: 1px; border-color: @line; border-radius: 16px;
-  background-color: @glass;
-  padding: 8px;
+  width: 640px;
   location: north;
-  y-offset: 180px;
+  y-offset: 22%;
+  border: 1px; border-color: @line; border-radius: 22px;
+  background-color: @glass;
+  padding: 6px;
 }
-mainbox  { spacing: 6px; children: [ inputbar, mode-switcher, listview ]; }
+mainbox  { spacing: 0; children: [ inputbar, listview, message ]; }
 
 inputbar {
-  padding: 10px 12px;
+  padding: 12px 14px 12px 16px;
   spacing: 12px;
   border: 0 0 1px 0; border-color: @line;
+  margin: 0 0 6px 0;
   children: [ textbox-icon, entry ];
 }
-textbox-icon  { content: "⌕"; font: @font-search; text-color: @dim; expand: false; vertical-align: 0.5; }
+textbox-icon  { content: "󰍉"; font: @font-search; text-color: @dim; expand: false; vertical-align: 0.5; }
 entry {
   placeholder: "Spotlight Search";
   placeholder-color: @mute;
@@ -49,35 +51,25 @@ entry {
   vertical-align: 0.5;
 }
 
-mode-switcher { spacing: 8px; enabled: false; }
-button {
-  padding: 5px 12px;
-  border-radius: 8px;
-  background-color: @card;
-  text-color: @dim;
-  font: @font-ui-sm;
-}
-button selected { background-color: @accent; text-color: @on-accent; }
-
 listview {
-  lines: 8; columns: 1;
-  spacing: 1px;
+  lines: 7; columns: 1;
+  spacing: 2px;
   scrollbar: false;
   fixed-height: false;
   dynamic: true;
   cycle: true;
-  padding: 4px 0 0 0;
+  padding: 0 0 2px 0;
 }
 element {
-  padding: 7px 10px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
   spacing: 12px;
   cursor: pointer;
 }
 element normal.normal, element alternate.normal { background-color: transparent; }
 element selected.normal { background-color: @accent; text-color: @on-accent; }
-element-icon { size: 26px; cursor: inherit; }
-element-text { text-color: inherit; vertical-align: 0.5; cursor: inherit; }
+element-icon { size: 32px; cursor: inherit; vertical-align: 0.5; }
+element-text { text-color: inherit; vertical-align: 0.5; cursor: inherit; markup: true; }
 
-message  { padding: 8px 12px; border-radius: 10px; background-color: @card; }
+message  { padding: 8px 12px; margin: 4px 0 0 0; border-radius: 10px; background-color: @card; }
 textbox  { text-color: @dim; }

@@ -1,4 +1,4 @@
-/* macOS Dark — rofi palette (imported by ~/.config/rofi/*.rasi) */
+/* macOS Dark — rofi palette, imported by the rofi themes in rofi/ */
 * {
   glass:     #1e1e20b8;
   scrim:     #00000066;

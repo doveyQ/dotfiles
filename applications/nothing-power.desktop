@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Power Menu
-Comment=Shut down, reboot, sleep, lock or log out
+Name=Session Menu
+Comment=Shut down, restart, sleep, lock or log out
 Exec=@BIN@/nothing-power
 Icon=system-shutdown
 Terminal=false

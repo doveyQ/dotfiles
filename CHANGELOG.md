@@ -6,6 +6,23 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-25
+
+A macOS-style desktop: frosted vibrant glass, SF Pro, Apple system colours with eight accents,
+Light & Dark mode, ten desktop widgets, Control Center, traffic lights, a Settings app — plus a
+security pass. Co-authored with Claude (Anthropic) via Claude Code.
+
+**Upgrading from 1.x:** run `make links` (or `./install.sh --links-only`). The active theme is
+now generated into `~/.config/hypr/theme/` by `nothing-theme`; the old `hypr/theme` symlink is
+replaced automatically.
+
+### Changed — launcher and session menu
+- **Launcher** (`Super` `D`): Spotlight — one glass panel, large search field with a magnifier,
+  32 px app icons with their category, the selected row in your accent colour.
+- **Session menu** (`Super` `Shift` `X`): a centred glass card like a macOS dialog — title, your
+  user and uptime, Shut Down · Restart · Sleep · Lock · Log Out with their keys; Shut Down turns
+  red when selected. Launcher entries renamed: *Session Menu*, *System Settings*.
+
 ### Added — macOS fidelity
 - **Accent colours and border styles**: `nothing-theme accent …` / `border …`, Settings →
   Appearance. `~/.config/hypr/theme/` is now generated (mode + accent) instead of a symlink.
@@ -87,6 +104,9 @@ project uses [Semantic Versioning](https://semver.org/).
   Shared helper `system/nothing-login.sh` (also used by Settings → Login screen).
 
 ### Fixed
+- rofi 2.0: every rofi menu (launcher, session menu, Tux menu, clipboard, pickers) lost its
+  background and colours — a `/*` inside a palette comment opened a nested comment that
+  swallowed the palette. The session menu also lost its last row (rofi 2.0 row paging).
 - Loading the hyprbars plugin put Hyprland into a config-reload loop until it crashed: the
   plugin is now requested on every config run (0.56 loads plugins declaratively). Title bars
   stay on maximised windows.
@@ -135,5 +155,6 @@ project uses [Semantic Versioning](https://semver.org/).
 - `bluetoothctl` no longer hangs the widgets when `bluetooth.service` is stopped.
 - Live-music equaliser in the island is vertically centred.
 
-[Unreleased]: https://github.com/doveyQ/dotfiles/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/doveyQ/dotfiles/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/doveyQ/dotfiles/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/doveyQ/dotfiles/releases/tag/v1.0.0

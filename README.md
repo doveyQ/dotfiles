@@ -13,6 +13,9 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
 
 **[Guide](docs/GUIDE.md)** · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
+Made by [doveyQ](https://github.com/doveyQ) · co-authored with **Claude** (Anthropic) via
+[Claude Code](https://claude.com/claude-code)
+
 </div>
 
 > **New here?** Everything — installation, daily use, how the pieces fit together,
@@ -48,8 +51,10 @@ EndeavourOS / Arch · Hyprland 0.56+ (Lua config) · Wayland · AMD
   recording. Hidden in fullscreen.
 - **Notification banners** — top-right squircles under the menu bar: app icon, bold title, round
   buttons, sliding in.
-- **Dock** (nwg-dock), **Spotlight-style launcher** (rofi), session menu with single-key
-  accelerators, **night mode** with a schedule (hyprsunset).
+- **Spotlight launcher** (`Super` `D`) — one glass panel, large search, app icons with their
+  category. **Session menu** (`Super` `Shift` `X`) — a centred glass card: Shut Down, Restart,
+  Sleep, Lock, Log Out with single-key accelerators.
+- **Dock** (nwg-dock) and **night mode** with a schedule (hyprsunset).
 
 **Windows & apps**
 
@@ -254,6 +259,14 @@ PRs welcome — run `make check` (and `make selftest` for Settings changes), fol
 
 [MIT](LICENSE). Apple's SF fonts and the WhiteSur icons are not included and keep their own
 licenses.
+
+## Authors
+
+- **[doveyQ](https://github.com/doveyQ)** — author and maintainer
+- **Claude** (Anthropic) — co-author: the macOS redesign, desktop widgets, theme system,
+  Settings app features and the security pass were written together in
+  [Claude Code](https://claude.com/claude-code); those commits carry a
+  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` trailer.
 
 ## Credits
 

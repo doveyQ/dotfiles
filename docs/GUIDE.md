@@ -306,10 +306,13 @@ Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
 ### Session menu — `Super` `Shift` `X` (or the Tux menu)
 
+A centred glass card: your user and uptime, then Shut Down · Restart · Sleep · Lock · Log Out.
+Shut Down is red when selected.
+
 | Key | Action |
 |---|---|
-| `P` | power off |
-| `R` | reboot |
+| `P` | shut down |
+| `R` | restart |
 | `S` | sleep (locks first) |
 | `L` | lock |
 | `E` | log out of Hyprland |

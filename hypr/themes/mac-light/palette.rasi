@@ -1,4 +1,4 @@
-/* macOS Light — rofi palette (imported by ~/.config/rofi/*.rasi) */
+/* macOS Light — rofi palette, imported by the rofi themes in rofi/ */
 * {
   glass:     #f6f6f8d1;
   scrim:     #00000033;

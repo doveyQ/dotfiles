@@ -1,5 +1,7 @@
-/* Session menu — full-screen dim, five frosted tiles
-   Colours + fonts: ~/.config/hypr/theme/palette.rasi          */
+/* Session menu (Super+Shift+X) — a centred frosted card, like a macOS dialog: title, who you
+   are, then Shut Down · Restart · Sleep · Lock · Log Out with their keys (P R S L E).
+   Selected row in your accent; Shut Down turns red. Enter chooses, Esc cancels.
+   Colours + fonts: ~/.config/hypr/theme/palette.rasi (light / dark, accent)                */
 @import "~/.config/hypr/theme/palette.rasi"
 
 configuration {
@@ -9,54 +11,51 @@ configuration {
   me-accept-entry: "MousePrimary";
 }
 * {
-  background-color: transparent; text-color: @fg;
+  background-color: transparent;
+  text-color: @fg;
   font: @font-ui;
 }
 window {
-  fullscreen: true;
-  background-color: @scrim;
-  padding: 0;
+  location: center;
+  width: 360px;
+  height: 352px;                    /* rofi under-counts rows in this card; make room for all five */
+  border: 1px; border-color: @line; border-radius: 22px;
+  background-color: @glass;
+  padding: 20px 10px 10px 10px;
 }
 mainbox {
-  children: [ dummy-top, textbox-title, listview, textbox-hint, dummy-bottom ];
-  spacing: 28px;
+  orientation: vertical;
+  spacing: 4px;
+  children: [ textbox-title, textbox-sub, listview ];
 }
-dummy-top, dummy-bottom { expand: true; }
 textbox-title {
-  content: "Session";
+  content: "Shut Down or Log Out";
   font: @font-display;
   horizontal-align: 0.5;
   expand: false;
-  text-color: @fg;
 }
-listview {
-  columns: 5; lines: 1; fixed-columns: true; fixed-height: true;
-  spacing: 18px;
-  expand: false;
-  layout: vertical;
-  margin: 0 28%;
-  scrollbar: false;
-  cycle: true;
-}
-element {
-  orientation: vertical;
-  padding: 26px 0 22px 0;
-  border: 1px; border-color: @line; border-radius: 20px;
-  background-color: @glass;
-  cursor: pointer;
-}
-element-text {
-  horizontal-align: 0.5; vertical-align: 0.5;
-  text-color: inherit;
-  cursor: inherit;
-}
-element selected.normal { background-color: @accent; text-color: @on-accent; border-color: transparent; }
-element selected.urgent { background-color: @alert; text-color: @on-accent; border-color: @alert; }
-element normal.urgent   { text-color: @fg; }
-textbox-hint {
-  content: "P  Power off   ·   R  Restart   ·   S  Sleep   ·   L  Lock   ·   E  Log out   ·   Esc  Cancel";
+textbox-sub {
+  content: "";                      /* filled in by the script: user and uptime */
   font: @font-ui-sm;
   text-color: @dim;
   horizontal-align: 0.5;
   expand: false;
 }
+listview {
+  columns: 1; lines: 5;
+  spacing: 2px;
+  padding: 10px 0 0 0;
+  fixed-height: true;
+  scrollbar: false;
+  cycle: true;
+}
+element {
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+element-text { text-color: inherit; cursor: inherit; vertical-align: 0.5; }
+element normal.normal, element alternate.normal { background-color: transparent; }
+element selected.normal { background-color: @accent; text-color: @on-accent; }
+element normal.urgent, element alternate.urgent { background-color: transparent; text-color: @fg; }
+element selected.urgent { background-color: @alert; text-color: @on-accent; }
