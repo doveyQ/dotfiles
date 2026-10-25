@@ -6,6 +6,10 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-10-25
+
+Hyprland × macOS: a new full-screen session menu and a gradient-framed launcher.
+
 ### Changed
 - **Session menu** (`Super` `Shift` `X`) is now drawn by nothing-shell: a full-screen frost
   with a lock-screen clock, a floating Dock-style glass bar whose border turns through accent →
@@ -167,6 +171,7 @@ replaced automatically.
 - `bluetoothctl` no longer hangs the widgets when `bluetooth.service` is stopped.
 - Live-music equaliser in the island is vertically centred.
 
-[Unreleased]: https://github.com/doveyQ/dotfiles/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/doveyQ/dotfiles/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/doveyQ/dotfiles/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/doveyQ/dotfiles/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/doveyQ/dotfiles/releases/tag/v1.0.0
