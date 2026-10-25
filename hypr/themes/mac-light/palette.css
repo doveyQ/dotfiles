@@ -34,5 +34,6 @@
 @define-color purple     #af52de;
 
 @define-color accent     @blue;
+@define-color accent2    @purple;   /* second gradient stop */
 @define-color warn       @orange;
 @define-color alert      @red;

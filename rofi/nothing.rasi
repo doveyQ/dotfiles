@@ -1,5 +1,6 @@
-/* Launcher (Super+D) — Spotlight: one frosted glass panel, large search field, app icons
-   with their category; the selected row in your accent colour.
+/* Launcher (Super+D) — Spotlight meets Hyprland: a frosted glass panel inside a glowing
+   accent → accent2 gradient frame (like Hyprland's two-colour borders), a big search field,
+   a macOS segmented control for Apps · Run · Windows, gradient selection, and a key-hint bar.
    Colours + fonts: ~/.config/hypr/theme/palette.rasi (light / dark, accent)                */
 @import "~/.config/hypr/theme/palette.rasi"
 
@@ -25,51 +26,107 @@ configuration {
   font: @font-ui;
 }
 
+/* the frame: the window is the gradient, the panel inside is the glass */
 window {
-  width: 640px;
+  width: 680px;
   location: north;
-  y-offset: 22%;
-  border: 1px; border-color: @line; border-radius: 22px;
-  background-color: @glass;
-  padding: 6px;
+  y-offset: 20%;
+  border-radius: 24px;
+  background-color: transparent;
+  background-image: @grad;
+  padding: 2px;
 }
-mainbox  { spacing: 0; children: [ inputbar, listview, message ]; }
+mainbox {
+  border-radius: 22px;
+  background-color: @panel;
+  padding: 8px;
+  spacing: 0;
+  children: [ inputbar, listview, message, footer ];
+}
 
 inputbar {
-  padding: 12px 14px 12px 16px;
+  padding: 10px 8px 12px 12px;
   spacing: 12px;
-  border: 0 0 1px 0; border-color: @line;
   margin: 0 0 6px 0;
-  children: [ textbox-icon, entry ];
+  border: 0 0 1px 0; border-color: @line;
+  children: [ textbox-icon, entry, mode-switcher ];
 }
-textbox-icon  { content: "󰍉"; font: @font-search; text-color: @dim; expand: false; vertical-align: 0.5; }
+textbox-icon  {
+  content: "󰍉";
+  font: @font-search;
+  text-color: @accent;
+  expand: false;
+  vertical-align: 0.5;
+}
 entry {
-  placeholder: "Spotlight Search";
+  placeholder: "Search apps, commands, windows";
   placeholder-color: @mute;
   font: @font-search;
   cursor: text;
   vertical-align: 0.5;
 }
 
+/* macOS segmented control */
+mode-switcher {
+  expand: false;
+  width: 230px;
+  spacing: 0;
+  padding: 3px;
+  border-radius: 10px;
+  background-color: @card;
+}
+button {
+  padding: 4px 6px;
+  border-radius: 8px;
+  horizontal-align: 0.5;
+  font: @font-ui-sm;
+  text-color: @dim;
+  cursor: pointer;
+  vertical-align: 0.5;
+}
+button selected { background-color: @card2; text-color: @fg; }
+
 listview {
   lines: 7; columns: 1;
   spacing: 2px;
   scrollbar: false;
-  fixed-height: false;
-  dynamic: true;
+  fixed-height: true;
   cycle: true;
-  padding: 0 0 2px 0;
 }
 element {
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 7px 10px;
+  border-radius: 12px;
   spacing: 12px;
   cursor: pointer;
 }
 element normal.normal, element alternate.normal { background-color: transparent; }
-element selected.normal { background-color: @accent; text-color: @on-accent; }
+element selected.normal {
+  background-image: @grad-h;
+  text-color: @on-accent;
+}
 element-icon { size: 32px; cursor: inherit; vertical-align: 0.5; }
 element-text { text-color: inherit; vertical-align: 0.5; cursor: inherit; markup: true; }
 
 message  { padding: 8px 12px; margin: 4px 0 0 0; border-radius: 10px; background-color: @card; }
 textbox  { text-color: @dim; }
+
+/* key hints, Hyprland-rice style */
+footer {
+  orientation: horizontal;
+  expand: false;
+  margin: 8px 0 0 0;
+  padding: 8px 6px 0 6px;
+  border: 1px 0 0 0; border-color: @line;
+  children: [ textbox-keys, textbox-brand ];
+}
+textbox-keys {
+  content: "↵ open    ⇥ switch    ↑↓ move    esc close";
+  font: @font-mono;
+  text-color: @mute;
+}
+textbox-brand {
+  content: "  hyprland";
+  font: @font-mono;
+  text-color: @mute;
+  expand: false;
+}

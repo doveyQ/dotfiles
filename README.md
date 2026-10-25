@@ -51,9 +51,10 @@ Made by [doveyQ](https://github.com/doveyQ) · co-authored with **Claude** (Anth
   recording. Hidden in fullscreen.
 - **Notification banners** — top-right squircles under the menu bar: app icon, bold title, round
   buttons, sliding in.
-- **Spotlight launcher** (`Super` `D`) — one glass panel, large search, app icons with their
-  category. **Session menu** (`Super` `Shift` `X`) — a centred glass card: Shut Down, Restart,
-  Sleep, Lock, Log Out with single-key accelerators.
+- **Launcher** (`Super` `D`) — Spotlight meets Hyprland: glass inside a two-colour gradient
+  frame, big search, an Apps · Run · Windows segmented control, gradient selection.
+  **Session menu** (`Super` `Shift` `X`) — the screen frosts over: a lock-screen clock and a
+  floating Dock-style bar with a turning gradient border; tiles magnify, risky actions count down.
 - **Dock** (nwg-dock) and **night mode** with a schedule (hyprsunset).
 
 **Windows & apps**
@@ -195,7 +196,7 @@ The defaults — change any of them in **Settings → Keyboard shortcuts** (clic
 | `Super` `N` | Control Center |
 | `Super` `A` | Pin the dynamic island open |
 | `Super` `Shift` `T` | Light ↔ Dark mode |
-| `Super` `Shift` `X` | Session menu — `P` power off · `R` restart · `S` sleep · `L` lock · `E` log out · `Esc` |
+| `Super` `Shift` `X` | Session menu — `P` shut down · `R` restart · `S` sleep · `L` lock · `E` log out · `Esc` |
 | `Super` `L` | Lock |
 | `Super` `Ctrl` `N` | Night mode on / off |
 | `Super` `Shift` `N` | Do Not Disturb |

@@ -306,8 +306,12 @@ Closes with `Esc`, `Super` `N`, or when the pointer leaves it.
 
 ### Session menu — `Super` `Shift` `X` (or the Tux menu)
 
-A centred glass card: your user and uptime, then Shut Down · Restart · Sleep · Lock · Log Out.
-Shut Down is red when selected.
+The screen frosts over: a lock-screen clock, and a floating Dock-style glass bar whose border
+turns through your accent and its partner colour (like Hyprland's animated borders). The five
+tiles magnify like the Dock; arrows / Tab or the mouse choose, Enter or a click confirms, a click
+outside closes. Shut Down, Restart and Log Out count down from 10 s first — Enter does it now,
+Esc cancels. Drawn by nothing-shell; if the shell isn't running, a rofi card takes its place
+(`NOTHING_ROFI=1 nothing-power` forces it).
 
 | Key | Action |
 |---|---|
@@ -316,7 +320,7 @@ Shut Down is red when selected.
 | `S` | sleep (locks first) |
 | `L` | lock |
 | `E` | log out of Hyprland |
-| `Esc` / `Q` | cancel |
+| `Esc` | cancel the countdown, or close |
 
 Arrow keys + `Enter` and the mouse work too.
 

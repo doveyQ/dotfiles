@@ -52,9 +52,12 @@ printf 'mode=%s\naccent=%s\nborder=%s\n' "$mode" "$accent" "$border" > "$STATE.t
 # Apple's accent colours: dark-mode / light-mode variants; libadwaita's nearest name
 declare -A DARK=([blue]=0A84FF [purple]=BF5AF2 [pink]=FF375F [red]=FF453A [orange]=FF9F0A [yellow]=FFD60A [green]=30D158 [graphite]=98989D)
 declare -A LIGHT=([blue]=007AFF [purple]=AF52DE [pink]=FF2D55 [red]=FF3B30 [orange]=FF9500 [yellow]=FFCC00 [green]=34C759 [graphite]=8E8E93)
+# second gradient stop (Hyprland-style two-colour borders): each accent's neighbour on the wheel
+declare -A DUO=([blue]=BF5AF2 [purple]=FF375F [pink]=FF9F0A [red]=FF9F0A [orange]=FF375F [yellow]=FF9F0A [green]=64D2FF [graphite]=D1D1D6)
 declare -A ADW=([blue]=blue [purple]=purple [pink]=pink [red]=red [orange]=orange [yellow]=yellow [green]=green [graphite]=slate)
 if [[ $mode == dark ]]; then hex=${DARK[$accent]}; else hex=${LIGHT[$accent]}; fi
 hex=${hex,,}                                  # lowercase for every consumer
+duo=${DUO[$accent],,}
 base="$HYPR/themes/mac-$mode"
 
 # ── generate ~/.config/hypr/theme/ ──
@@ -67,11 +70,16 @@ put palette.css <<EOF
 /* $note */
 @import url("../themes/mac-$mode/palette.css");
 @define-color accent #$hex;
+@define-color accent2 #$duo;
 EOF
 put palette.rasi <<EOF
 /* $note */
 @import "$base/palette.rasi"
-* { accent: #$hex; }
+* {
+  accent: #$hex; accent2: #$duo;
+  grad:   linear-gradient(135, #$hex, #$duo);         /* rofi can't put variables in gradients */
+  grad-h: linear-gradient(to right, #$hex, #$duo);
+}
 EOF
 case $border in
   accent)   border_lua="t.border_active = \"rgba(${hex}cc)\"" ;;

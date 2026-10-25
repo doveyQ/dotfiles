@@ -2,6 +2,7 @@
 * {
   glass:     #f6f6f8d1;
   scrim:     #00000033;
+  panel:     #f6f6f8eb;
   card:      #0000000a;
   card2:     #00000014;
   line:      #00000014;
@@ -10,10 +11,14 @@
   mute:      #aeaeb2;
   on-accent: #ffffff;
   accent:    #007aff;
+  accent2:   #bf5af2;
+  grad:      linear-gradient(135, #007aff, #bf5af2);
+  grad-h:    linear-gradient(to right, #007aff, #bf5af2);
   alert:     #ff3b30;
 
   font-ui:      "SF Pro Text,Inter,Cantarell 12";
   font-ui-sm:   "SF Pro Text,Inter,Cantarell 10";
   font-display: "SF Pro Display,Inter Display,Inter 22";
+  font-mono:    "JetBrainsMono Nerd Font 9";
   font-search:  "SF Pro Display,Inter Display,Inter 19";
 }

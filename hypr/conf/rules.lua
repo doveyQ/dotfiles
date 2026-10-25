@@ -61,6 +61,8 @@ return function(_)
     hl.layer_rule({ name = "rofi-fade",     match = { namespace = "^rofi$" },            animation = "fade" })
     -- notification banners slide in from the right edge, like macOS
     hl.layer_rule({ name = "notif-slide",   match = { namespace = "^swaync-notification-window$" }, animation = "slide right" })
+    -- session menu (Super+Shift+X): the whole screen frosts behind it; it animates itself
+    hl.layer_rule({ name = "session-glass", match = { namespace = "^nothing-session$" }, blur = true, ignore_alpha = 0, no_anim = true })
     -- the island animates itself; a compositor slide would fight its morph
     hl.layer_rule({ name = "island-static", match = { namespace = "^nothing-island$" },   no_anim = true })
 end

@@ -6,6 +6,18 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Session menu** (`Super` `Shift` `X`) is now drawn by nothing-shell: a full-screen frost
+  with a lock-screen clock, a floating Dock-style glass bar whose border turns through accent →
+  accent2 (Hyprland's animated border), squircle tiles in two-colour gradients that magnify
+  like the Dock, a label bubble, and a fastfetch-style status line (Hyprland, kernel, uptime).
+  Shut Down, Restart and Log Out count down 10 s first (Enter: now · Esc: cancel). The rofi
+  card stays as the fallback.
+- **Launcher** (`Super` `D`): a two-colour gradient frame around the glass, an Apps · Run ·
+  Windows segmented control, gradient selection and a key-hint bar.
+- Themes gain a second accent colour, `accent2` (each accent's neighbour on the colour wheel),
+  in palette.css and palette.rasi, plus ready-made rofi gradients `@grad` / `@grad-h`.
+
 ## [2.0.0] — 2026-10-25
 
 A macOS-style desktop: frosted vibrant glass, SF Pro, Apple system colours with eight accents,

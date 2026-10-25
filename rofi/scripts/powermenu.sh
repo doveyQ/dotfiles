@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Session menu (Super+Shift+X): a centred card listing the five actions.
+# Session menu (Super+Shift+X): nothing-shell's full-screen menu, or this rofi card as a fallback.
 # Single-key accelerators: p r s l e · Enter chooses · Esc cancels.
 theme=~/.config/rofi/powermenu.rasi
+# the full-screen session menu lives in nothing-shell; this rofi card is the fallback
+if [[ -z ${NOTHING_ROFI:-} ]] && "$HOME/.local/bin/nothing-shell" session toggle >/dev/null 2>&1; then
+  exit 0
+fi
 pidof rofi >/dev/null && { pkill -x rofi; exit 0; }
 
 row() {   # row <glyph> <label> <key>
